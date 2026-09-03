@@ -42,29 +42,99 @@ $('#sampleBtn').addEventListener('click', async () => {
   loadAnalysis();
 });
 
-$('#bankConnectBtn').addEventListener('click', async () => {
+// ---------- bank connect ----------
+// Basiq consent happens in a separate tab, so we poll /api/bank/sync until a
+// connection with transactions shows up (or the user gives up), and also retry
+// the moment this tab regains focus.
+const bankButtons = () => [$('#bankConnectBtn'), $('#resultsBankBtn')].filter(Boolean);
+let bankPoll = null;
+
+function setBankStatus(msg) {
+  const el = $('#bankStatus');
+  if (!el) return;
+  el.hidden = !msg;
+  el.textContent = msg || '';
+  const hint = $('#bankHint');
+  if (hint && config.bankConnect === 'available') hint.textContent = msg || '';
+}
+
+function stopBankPoll() {
+  if (!bankPoll) return;
+  clearInterval(bankPoll.timer);
+  document.removeEventListener('visibilitychange', bankPoll.onFocus);
+  window.removeEventListener('focus', bankPoll.onFocus);
+  bankPoll = null;
+  bankButtons().forEach((b) => { b.disabled = false; b.classList.remove('waiting'); });
+  setBankStatus('');
+}
+
+async function trySync() {
+  if (!bankPoll || bankPoll.busy) return false;
+  bankPoll.busy = true;
+  try {
+    const sync = await api('/api/bank/sync', { method: 'POST' });
+    if (sync.ok) {
+      stopBankPoll();
+      toast(`Connected — synced ${sync.transactionCount} transactions from your bank`);
+      await loadAnalysis();
+      return true;
+    }
+    setBankStatus(sync.reason === 'no-transactions-yet'
+      ? 'Bank connected — waiting for transactions to arrive…'
+      : 'Waiting for you to finish the bank consent in the other tab…');
+  } catch (err) {
+    // Session lost its Basiq user (e.g. server restart): stop and let the user retry.
+    stopBankPoll();
+    toast(err.message, 'err', 8000);
+  } finally {
+    if (bankPoll) bankPoll.busy = false;
+  }
+  return false;
+}
+
+function startBankPoll() {
+  stopBankPoll();
+  const started = Date.now();
+  const MAX_MS = 15 * 60 * 1000;
+  bankPoll = { busy: false, timer: null, onFocus: null };
+  bankPoll.onFocus = () => { if (!document.hidden) trySync(); };
+  bankPoll.timer = setInterval(async () => {
+    if (Date.now() - started > MAX_MS) {
+      stopBankPoll();
+      toast('Still no bank connection. Click Connect bank again when you have finished the consent.', 'err', 10000);
+      return;
+    }
+    trySync();
+  }, 5000);
+  document.addEventListener('visibilitychange', bankPoll.onFocus);
+  window.addEventListener('focus', bankPoll.onFocus);
+  bankButtons().forEach((b) => { b.disabled = true; b.classList.add('waiting'); });
+  setBankStatus('Waiting for you to finish the bank consent in the other tab…');
+}
+
+async function connectBank() {
   try {
     const out = await api('/api/bank/connect', { method: 'POST' });
-    window.open(out.consentUrl, '_blank');
-    toast('Complete the bank consent in the new tab, then click Connect bank again to sync.');
-    // try syncing after consent
-    setTimeout(async () => {
-      try {
-        const sync = await api('/api/bank/sync', { method: 'POST' });
-        if (sync.ok) {
-          toast(`Synced ${sync.transactionCount} transactions from your bank`);
-          loadAnalysis();
-        }
-      } catch { /* not connected yet */ }
-    }, 4000);
+    const tab = window.open(out.consentUrl, '_blank');
+    if (!tab) {
+      toast('Your browser blocked the consent window — allow pop-ups for this site and try again.', 'err', 10000);
+      return;
+    }
+    toast('Complete the bank consent in the new tab — this page will update automatically.', 'ok', 8000);
+    startBankPoll();
+    // If they already have a live connection (re-connecting), sync straight away.
+    trySync();
   } catch (err) {
     toast(err.message, 'err', 8000);
   }
-});
+}
+
+bankButtons().forEach((b) => b.addEventListener('click', connectBank));
 
 $('#resetBtn').addEventListener('click', () => {
   $('#results').hidden = true;
   $('#onboarding').hidden = false;
+  window.scrollTo({ top: 0 });
 });
 
 // ---------- analysis ----------
@@ -371,7 +441,7 @@ function renderPills() {
   $('#bankPill').textContent = config.bankConnect === 'available' ? '🏦 Bank connect ready' : '🏦 Bank connect: needs BASIQ_API_KEY';
   if (config.bankConnect === 'available') $('#bankPill').classList.add('good');
   else {
-    $('#bankConnectBtn').disabled = true;
+    bankButtons().forEach((b) => { b.disabled = true; });
     $('#bankHint').textContent = 'Set BASIQ_API_KEY to enable (free sandbox key from basiq.io works).';
   }
   renderPills();
