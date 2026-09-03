@@ -75,6 +75,41 @@ export async function getConnections(userId) {
   return json.data || [];
 }
 
+const institutionNames = new Map(); // id -> name (institutions rarely change)
+async function institutionName(id) {
+  if (!id) return 'your bank';
+  if (institutionNames.has(id)) return institutionNames.get(id);
+  try {
+    const json = await api('GET', `/institutions/${encodeURIComponent(id)}`);
+    const name = json.shortName || json.name || id;
+    institutionNames.set(id, name);
+    return name;
+  } catch {
+    return id;
+  }
+}
+
+// Connections with a human-readable bank name, for the "connected to X" UI.
+export async function getConnectionSummaries(userId) {
+  const connections = await getConnections(userId);
+  return Promise.all(connections.map(async (c) => ({
+    id: c.id,
+    status: c.status || 'active',
+    institution: await institutionName(c.institution?.id),
+    lastUsed: c.lastUsed || c.createdDate || null
+  })));
+}
+
+// Removes every connection (and, on Basiq's side, its cached accounts and
+// transactions) so the user can start again with a different bank.
+export async function deleteAllConnections(userId) {
+  const connections = await getConnections(userId);
+  for (const c of connections) {
+    await api('DELETE', `/users/${encodeURIComponent(userId)}/connections/${encodeURIComponent(c.id)}`);
+  }
+  return connections.length;
+}
+
 // Fetch all transactions for a user (paginated), mapped to the same shape
 // the CSV parser produces: negative amount = money out.
 export async function getTransactions(userId) {
