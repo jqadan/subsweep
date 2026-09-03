@@ -301,10 +301,43 @@ app.post('/api/bank/connect', async (req, res) => {
   }
 });
 
+function basiqUserFor(ctx) {
+  if (!ctx.ws.basiqUserId && ctx.user?.basiqUserId) ctx.ws.basiqUserId = ctx.user.basiqUserId;
+  return ctx.ws.basiqUserId;
+}
+
+// Which bank(s) this session is connected to — drives the connect / re-sync /
+// disconnect buttons so users always know what state they're in.
+app.get('/api/bank/status', async (req, res) => {
+  const ctx = getContext(req, res);
+  if (!basiq.basiqEnabled()) return res.json({ configured: false, connected: false, connections: [] });
+  const basiqUserId = basiqUserFor(ctx);
+  if (!basiqUserId) return res.json({ configured: true, connected: false, connections: [] });
+  try {
+    const connections = await basiq.getConnectionSummaries(basiqUserId);
+    res.json({ configured: true, connected: connections.length > 0, connections, source: ctx.ws.source });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Remove the bank connection(s) so the user can connect a different bank.
+app.post('/api/bank/disconnect', async (req, res) => {
+  const ctx = getContext(req, res);
+  const basiqUserId = basiq.basiqEnabled() ? basiqUserFor(ctx) : null;
+  if (!basiqUserId) return res.json({ ok: true, removed: 0 });
+  try {
+    const removed = await basiq.deleteAllConnections(basiqUserId);
+    if (ctx.ws.source === 'bank') { ctx.ws.transactions = null; ctx.ws.source = null; }
+    res.json({ ok: true, removed });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/bank/sync', async (req, res) => {
   const ctx = getContext(req, res);
-  if (!ctx.ws.basiqUserId && ctx.user?.basiqUserId) ctx.ws.basiqUserId = ctx.user.basiqUserId;
-  if (!basiq.basiqEnabled() || !ctx.ws.basiqUserId) {
+  if (!basiq.basiqEnabled() || !basiqUserFor(ctx)) {
     return res.status(400).json({ error: 'No bank connection in this session' });
   }
   try {
