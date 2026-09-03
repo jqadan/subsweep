@@ -1,129 +1,316 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-AU">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SubSweep — find the subscriptions you forgot you're paying for</title>
-  <meta name="description" content="Upload a bank statement or connect your bank. SubSweep finds every recurring charge, flags price hikes and refund windows, and gives you cancel links and refund emails." />
+  <meta name="description" content="Upload a bank statement or connect your bank. SubSweep finds every recurring charge, flags price hikes and refund windows, and gives you cancel links and ready-to-send refund emails. Built for Australian banks." />
+  <meta property="og:title" content="SubSweep — find the subscriptions you forgot you're paying for" />
+  <meta property="og:description" content="See what your subscriptions really cost per year, catch price hikes, and claim refunds. Free scan, no card required." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧹</text></svg>" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
-    .land-hero { text-align: center; padding: 56px 18px 40px; }
-    .land-hero h1 { font-size: 38px; margin: 0 0 14px; line-height: 1.15; }
-    .land-hero .sub { color: var(--muted); font-size: 18px; max-width: 620px; margin: 0 auto 26px; line-height: 1.6; }
-    .land-hero .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-    .land-hero .btn { padding: 14px 26px; font-size: 16px; }
-    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 30px 0; }
-    .step { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
-    .step .n { font-size: 13px; font-weight: 700; color: var(--accent); }
-    .step h3 { margin: 6px 0 8px; font-size: 17px; }
-    .step p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
-    .section-title { text-align: center; font-size: 24px; margin: 46px 0 6px; }
-    .section-sub { text-align: center; color: var(--muted); margin: 0 0 22px; }
-    .plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; max-width: 640px; margin: 0 auto 20px; }
-    .plan { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 24px; text-align: center; }
-    .plan.featured { border: 2px solid var(--accent); }
-    .plan .price { font-size: 32px; font-weight: 700; margin: 8px 0 2px; }
-    .plan .per { color: var(--muted); font-size: 13px; }
-    .plan ul { text-align: left; padding-left: 20px; color: var(--muted); font-size: 14px; line-height: 1.9; }
-    .faq { max-width: 640px; margin: 0 auto 30px; }
-    .faq details { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; margin-bottom: 10px; }
-    .faq summary { font-weight: 600; cursor: pointer; }
-    .faq p { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 10px 0 0; }
+    :root {
+      --ink: #101828;
+      --ink-2: #344054;
+      --muted: #667085;
+      --line: #e6e8ef;
+      --paper: #fbfaf7;
+      --panel: #ffffff;
+      --brand: #5b3df5;
+      --brand-2: #8b6cff;
+      --brand-ink: #2a1a80;
+      --mint: #12b981;
+      --mint-bg: #e4f8ef;
+      --coral: #f0483e;
+      --coral-bg: #fdeceb;
+      --amber: #c77d0a;
+      --amber-bg: #fef3dc;
+      --radius: 18px;
+      --shadow: 0 20px 60px -20px rgba(16, 24, 40, 0.25);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; background: var(--paper); color: var(--ink);
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3 { font-family: "Bricolage Grotesque", "Inter", sans-serif; letter-spacing: -0.02em; margin: 0; }
+    a { color: inherit; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+    /* ---------- nav ---------- */
+    .nav { position: sticky; top: 0; z-index: 20; background: rgba(251, 250, 247, 0.85); backdrop-filter: blur(10px); border-bottom: 1px solid transparent; }
+    .nav.scrolled { border-bottom-color: var(--line); }
+    .nav .wrap { display: flex; align-items: center; gap: 24px; height: 68px; }
+    .logo { display: flex; align-items: center; gap: 10px; font-family: "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 20px; text-decoration: none; }
+    .logo .mark { width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); display: grid; place-items: center; font-size: 18px; box-shadow: 0 6px 16px -6px rgba(91, 61, 245, 0.6); }
+    .nav-links { display: flex; gap: 26px; margin-left: auto; font-size: 14.5px; font-weight: 500; color: var(--ink-2); }
+    .nav-links a { text-decoration: none; }
+    .nav-links a:hover { color: var(--brand); }
+    .btn { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; padding: 12px 20px; border-radius: 12px; font-weight: 600; font-size: 15px; text-decoration: none; border: 1px solid var(--line); background: var(--panel); color: var(--ink); transition: transform .15s, box-shadow .15s, background .15s; cursor: pointer; }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px -10px rgba(16,24,40,.3); }
+    .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; box-shadow: 0 10px 24px -10px rgba(91,61,245,.7); }
+    .btn.primary:hover { background: #4f32e0; }
+    .btn.small { padding: 9px 16px; font-size: 14px; }
+
+    /* ---------- hero ---------- */
+    .hero { padding: 72px 0 40px; position: relative; overflow: hidden; }
+    .hero::before { content: ""; position: absolute; inset: -20% -10% auto -10%; height: 70%; background: radial-gradient(60% 60% at 70% 30%, rgba(139,108,255,.22), transparent 60%), radial-gradient(40% 50% at 20% 60%, rgba(18,185,129,.14), transparent 60%); pointer-events: none; }
+    .hero .wrap { display: grid; grid-template-columns: 1.05fr .95fr; gap: 48px; align-items: center; position: relative; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--brand-ink); background: #efeafd; border: 1px solid #ddd3fb; padding: 6px 12px; border-radius: 999px; margin-bottom: 18px; }
+    .eyebrow .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 4px rgba(18,185,129,.2); }
+    h1.display { font-size: clamp(38px, 5.2vw, 58px); line-height: 1.04; font-weight: 800; }
+    h1.display em { font-style: normal; color: var(--brand); }
+    .lede { font-size: 18px; color: var(--ink-2); max-width: 520px; margin: 20px 0 28px; }
+    .cta-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .fine { font-size: 13px; color: var(--muted); margin-top: 14px; }
+    .fine b { color: var(--ink-2); font-weight: 600; }
+
+    /* ---------- product card (hero visual) ---------- */
+    .stage { position: relative; padding: 24px 28px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .card-head { background: linear-gradient(135deg, #1b1d3a, #2d2f6b 60%, #3a2f9a); color: #fff; padding: 20px 22px 18px; }
+    .card-head .lbl { font-size: 12px; opacity: .75; letter-spacing: .04em; text-transform: uppercase; }
+    .card-head .big { font-family: "Bricolage Grotesque", sans-serif; font-size: 40px; font-weight: 800; line-height: 1.1; margin: 4px 0 2px; }
+    .card-head .sub { font-size: 13px; opacity: .8; }
+    .card-head .pills { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .card-head .pill { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.2); }
+    .row { display: flex; align-items: center; gap: 12px; padding: 13px 18px; border-top: 1px solid var(--line); }
+    .row .ic { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; font-weight: 700; font-size: 13px; flex: none; }
+    .row .nm { font-weight: 600; font-size: 14.5px; }
+    .row .meta { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+    .row .amt { margin-left: auto; text-align: right; font-weight: 700; font-size: 15px; white-space: nowrap; }
+    .row .amt small { display: block; font-weight: 500; font-size: 11.5px; color: var(--muted); }
+    .tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-left: 6px; vertical-align: middle; }
+    .tag.hike { background: var(--coral-bg); color: var(--coral); }
+    .tag.refund { background: var(--mint-bg); color: #0b8a5f; }
+    .tag.lapsed { background: var(--amber-bg); color: var(--amber); }
+    .float { position: absolute; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow); font-size: 13px; animation: float 6s ease-in-out infinite; }
+    .float.a { right: -28px; top: -22px; }
+    .float.b { left: -28px; bottom: -22px; animation-delay: -3s; }
+    .float .t { font-weight: 700; display: block; margin-bottom: 2px; }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+    /* ---------- trust strip ---------- */
+    .trust { padding: 22px 0 8px; }
+    .trust .wrap { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .trust .item { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; color: var(--ink-2); }
+    .trust .item .i { font-size: 18px; line-height: 1; }
+    .trust .item b { display: block; color: var(--ink); font-weight: 600; margin-bottom: 1px; }
+
+    /* ---------- sections ---------- */
+    section { padding: 72px 0; }
+    .sec-head { max-width: 640px; margin-bottom: 36px; }
+    .kicker { font-size: 13px; font-weight: 700; color: var(--brand); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+    h2 { font-size: clamp(28px, 3.4vw, 38px); font-weight: 800; line-height: 1.12; }
+    .sec-head p { color: var(--ink-2); font-size: 17px; margin: 14px 0 0; }
+
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .step { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; position: relative; }
+    .step .n { width: 34px; height: 34px; border-radius: 10px; background: var(--ink); color: #fff; font-weight: 700; display: grid; place-items: center; font-size: 14px; margin-bottom: 16px; }
+    .step h3 { font-size: 19px; margin-bottom: 8px; }
+    .step p { margin: 0; color: var(--ink-2); font-size: 15px; }
+    .step .mini { margin-top: 16px; background: var(--paper); border: 1px dashed var(--line); border-radius: 12px; padding: 12px; font-size: 12.5px; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+    .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .feat { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
+    .feat .ic { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; margin-bottom: 14px; }
+    .feat h3 { font-size: 18px; margin-bottom: 6px; }
+    .feat p { margin: 0; color: var(--ink-2); font-size: 14.5px; }
+
+    .plans { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; max-width: 760px; }
+    .plan { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; }
+    .plan.pro { border: 2px solid var(--brand); position: relative; box-shadow: var(--shadow); }
+    .plan.pro .badge { position: absolute; top: -12px; left: 24px; background: var(--brand); color: #fff; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+    .plan h3 { font-size: 20px; }
+    .plan .price { font-family: "Bricolage Grotesque", sans-serif; font-size: 44px; font-weight: 800; margin: 10px 0 0; line-height: 1; }
+    .plan .per { color: var(--muted); font-size: 13.5px; margin-bottom: 18px; }
+    .plan ul { list-style: none; padding: 0; margin: 0 0 22px; }
+    .plan li { padding: 7px 0; font-size: 14.5px; color: var(--ink-2); display: flex; gap: 10px; align-items: flex-start; }
+    .plan li::before { content: "✓"; color: var(--mint); font-weight: 800; }
+
+    .faq { max-width: 760px; }
+    .faq details { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 20px; margin-bottom: 10px; }
+    .faq summary { font-weight: 600; cursor: pointer; font-size: 15.5px; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+    .faq summary::after { content: "+"; font-size: 20px; color: var(--muted); }
+    .faq details[open] summary::after { content: "–"; }
+    .faq p { color: var(--ink-2); font-size: 14.5px; margin: 10px 0 0; }
+
+    .closer { background: var(--ink); color: #fff; border-radius: 28px; padding: 56px 40px; text-align: center; position: relative; overflow: hidden; }
+    .closer::before { content: ""; position: absolute; inset: 0; background: radial-gradient(50% 80% at 80% 20%, rgba(139,108,255,.5), transparent 60%), radial-gradient(40% 60% at 10% 90%, rgba(18,185,129,.35), transparent 60%); }
+    .closer > * { position: relative; }
+    .closer h2 { color: #fff; }
+    .closer p { color: rgba(255,255,255,.8); font-size: 17px; max-width: 560px; margin: 14px auto 26px; }
+    .closer .btn.primary { background: #fff; color: var(--ink); border-color: #fff; box-shadow: none; }
+
+    footer { padding: 30px 0 40px; color: var(--muted); font-size: 13px; line-height: 1.6; border-top: 1px solid var(--line); margin-top: 30px; }
+    footer .wrap { display: flex; gap: 24px; justify-content: space-between; flex-wrap: wrap; }
+
+    @media (max-width: 900px) {
+      .hero .wrap { grid-template-columns: 1fr; gap: 36px; }
+      .float { display: none; }
+      .stage { padding: 0; }
+      .nav .btn.small:not(.primary) { display: none; }
+      .trust .wrap { grid-template-columns: repeat(2, 1fr); }
+      .steps, .features { grid-template-columns: 1fr; }
+      .plans { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+      section { padding: 56px 0; }
+    }
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <span class="logo">🧹</span>
-      <div>
-        <h1>SubSweep</h1>
-        <p class="tagline">Subscription leak finder</p>
+  <nav class="nav" id="nav">
+    <div class="wrap">
+      <a class="logo" href="/"><span class="mark">🧹</span>SubSweep</a>
+      <div class="nav-links">
+        <a href="#how">How it works</a>
+        <a href="#features">Features</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#faq">FAQ</a>
       </div>
+      <a class="btn small" href="/app">Log in</a>
+      <a class="btn primary small" href="/app">Scan free</a>
     </div>
-    <div class="pills">
-      <a class="pill btnpill" href="/app" style="text-decoration:none">Open the app →</a>
+  </nav>
+
+  <header class="hero">
+    <div class="wrap">
+      <div>
+        <div class="eyebrow"><span class="dot"></span> Built for Australian banks</div>
+        <h1 class="display">Find the subscriptions you <em>forgot</em> you're paying for.</h1>
+        <p class="lede">Upload a bank statement — or connect your bank — and SubSweep finds every recurring charge, shows what it really costs you per year, flags price hikes, and helps you claim refunds on recent charges.</p>
+        <div class="cta-row">
+          <a class="btn primary" href="/app">Scan my statement — free →</a>
+          <a class="btn" href="/app" onclick="sessionStorage.setItem('demo','1')">See a live demo</a>
+        </div>
+        <p class="fine"><b>Free scan, no card required.</b> Statements are analysed in memory and never stored.</p>
+      </div>
+
+      <div class="stage">
+        <div class="card" aria-label="Example SubSweep results">
+          <div class="card-head">
+            <div class="lbl">You're paying subscriptions worth</div>
+            <div class="big">$3,117.84<span style="font-size:20px;font-weight:600;opacity:.8">/yr</span></div>
+            <div class="sub">$259.82 per month · 8 recurring charges found</div>
+            <div class="pills"><span class="pill">💸 4 in refund window</span><span class="pill">📈 1 price hike</span><span class="pill">💤 1 possibly lapsed</span></div>
+          </div>
+          <div class="row"><div class="ic" style="background:#ffe8e6;color:#c8322a">N</div><div><div class="nm">Netflix <span class="tag hike">price up 35%</span></div><div class="meta">monthly · charged 3 days ago</div></div><div class="amt">$22.99<small>$275.88/yr</small></div></div>
+          <div class="row"><div class="ic" style="background:#fde9d7;color:#b8500f">A</div><div><div class="nm">Adobe Creative Cloud <span class="tag refund">refund window</span></div><div class="meta">monthly · charged 2 days ago</div></div><div class="amt">$43.99<small>$527.88/yr</small></div></div>
+          <div class="row"><div class="ic" style="background:#e4e9ff;color:#3b4fd0">S</div><div><div class="nm">Stan <span class="tag lapsed">no charge for 131d</span></div><div class="meta">monthly · may already be cancelled</div></div><div class="amt">$17.00<small>$204.00/yr</small></div></div>
+          <div class="row"><div class="ic" style="background:#e4f8ef;color:#0b8a5f">G</div><div><div class="nm">Gym membership</div><div class="meta">fortnightly · 26 charges</div></div><div class="amt">$71.28<small>$855.40/yr</small></div></div>
+        </div>
+        <div class="float a"><span class="t">📧 Refund email ready</span>Pre-written for Adobe's recent charge</div>
+        <div class="float b"><span class="t">🔔 Monthly monitoring</span>We'll re-check and email what changed</div>
+      </div>
     </div>
   </header>
 
-  <main>
-    <section class="land-hero">
-      <h1>Find the subscriptions you<br />forgot you're paying for</h1>
-      <p class="sub">
-        Upload a bank statement — or connect your bank — and SubSweep finds every recurring charge:
-        what each one costs you per year, which ones just raised their price, and which recent
-        charges may still be refundable. With cancel links and ready-to-send refund emails.
-      </p>
-      <div class="cta-row">
-        <a class="btn primary" href="/app">Scan my statement — free</a>
-        <a class="btn" href="/app" onclick="sessionStorage.setItem('demo','1')">See a live demo</a>
-      </div>
-      <p class="fine" style="margin-top:14px">Free scan, no card required. Statements are processed in memory and never stored.</p>
-    </section>
-
-    <div class="steps">
-      <div class="step"><div class="n">STEP 1</div><h3>Add your transactions</h3>
-        <p>Export a CSV from your bank's website (every Australian bank has this), or connect through
-           the official open-banking consent flow.</p></div>
-      <div class="step"><div class="n">STEP 2</div><h3>See your leaks</h3>
-        <p>Our detector separates real subscriptions from everyday spending and totals what
-           they cost you per month and per year.</p></div>
-      <div class="step"><div class="n">STEP 3</div><h3>Cancel &amp; claim</h3>
-        <p>One-click cancel guides for 30+ services, price-hike alerts, and refund-request
-           emails for charges inside the refund window.</p></div>
+  <div class="trust">
+    <div class="wrap">
+      <div class="item"><span class="i">🔒</span><div><b>Never stored</b>Statements are processed in memory and discarded.</div></div>
+      <div class="item"><span class="i">🏦</span><div><b>Official bank consent</b>Bank connection uses the regulated CDR flow — we never see your login.</div></div>
+      <div class="item"><span class="i">🇦🇺</span><div><b>All major AU banks</b>CBA, Westpac, NAB, ANZ, ING, Up and more.</div></div>
+      <div class="item"><span class="i">💳</span><div><b>Free to start</b>See your top leaks with no card, no commitment.</div></div>
     </div>
+  </div>
 
-    <h2 class="section-title">Simple pricing</h2>
-    <p class="section-sub">The free scan shows your three biggest leaks. Pro shows everything.</p>
-    <div class="plans">
-      <div class="plan">
-        <h3>Free</h3>
-        <div class="price">$0</div>
-        <div class="per">forever</div>
-        <ul>
-          <li>Statement scan</li>
-          <li>Top 3 leaks with totals</li>
-          <li>Cancel guides</li>
-        </ul>
-        <a class="btn" href="/app">Start free</a>
+  <section id="how">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="kicker">How it works</div>
+        <h2>Two minutes from statement to savings.</h2>
+        <p>No spreadsheets, no scrolling through twelve months of transactions. SubSweep does the reading for you.</p>
       </div>
-      <div class="plan featured">
-        <h3>Pro</h3>
-        <div class="price">$9.99</div>
-        <div class="per">per month, cancel anytime</div>
-        <ul>
-          <li>Every subscription found</li>
-          <li>Price-hike alerts</li>
-          <li>Refund-window flags + refund emails</li>
-          <li>Saved results in your account</li>
-        </ul>
-        <a class="btn primary" href="/app">Go Pro</a>
+      <div class="steps">
+        <div class="step"><div class="n">1</div><h3>Add your transactions</h3><p>Export a CSV from your bank's website — every Australian bank has this — or connect securely through open banking.</p><div class="mini">Date, Description, Amount<br>01/08/2026, NETFLIX.COM, -22.99<br>03/08/2026, ADOBE CREATIVE CLOUD, -43.99</div></div>
+        <div class="step"><div class="n">2</div><h3>We find the recurring charges</h3><p>Our detector separates real subscriptions from everyday spending — weekly, monthly, quarterly or yearly — and totals what they cost you.</p><div class="mini">✓ Netflix — monthly, 12 charges<br>✓ Adobe — monthly, 8 charges<br>✗ Woolworths — irregular, skipped</div></div>
+        <div class="step"><div class="n">3</div><h3>Cancel, claim, and keep watching</h3><p>Direct cancel links for 30+ services, refund emails for charges still in the refund window, and monthly re-checks so nothing creeps back.</p><div class="mini">→ Cancel guide<br>→ Refund email (ready to send)<br>→ Monthly monitoring: on</div></div>
       </div>
     </div>
+  </section>
 
-    <h2 class="section-title">Questions</h2>
-    <div class="faq">
-      <details><summary>Is my banking data safe?</summary>
-        <p>Uploaded statements are analysed in memory for your session and never written to disk or
-           shared. If you create an account, only the derived subscription list is saved — never your
-           raw transactions. Bank connections use the regulated Consumer Data Right consent flow, so
-           we never see your bank login.</p></details>
-      <details><summary>Which banks work?</summary>
-        <p>Statement upload works with CSV exports from all major Australian banks (CBA, Westpac,
-           NAB, ANZ, ING, Up and more). Direct bank connection covers CDR-enabled institutions.</p></details>
-      <details><summary>Do you cancel subscriptions for me?</summary>
-        <p>We give you the fastest path — direct cancel links for 30+ services and a pre-written
-           refund email for recent charges — but the final click is always yours. That keeps you in
-           control of your accounts.</p></details>
-      <details><summary>Is this financial advice?</summary>
-        <p>No. SubSweep is a tool for reviewing your own spending on everyday services. It doesn't
-           recommend financial products or provide financial advice.</p></details>
+  <section id="features" style="background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="kicker">What you get</div>
+        <h2>Everything a forgotten subscription hopes you'll never do.</h2>
+      </div>
+      <div class="features">
+        <div class="feat"><div class="ic" style="background:var(--coral-bg)">📈</div><h3>Price-hike alerts</h3><p>See exactly which services quietly raised their price since you signed up — and by how much.</p></div>
+        <div class="feat"><div class="ic" style="background:var(--mint-bg)">💸</div><h3>Refund-window flags</h3><p>Charges from the last 14 days are often refundable. We flag them and write the refund request for you.</p></div>
+        <div class="feat"><div class="ic" style="background:#efeafd">🔗</div><h3>One-click cancel links</h3><p>Straight to the cancellation page for Netflix, Spotify, Stan, Kayo, Adobe, gyms and 30+ more.</p></div>
+        <div class="feat"><div class="ic" style="background:var(--amber-bg)">💤</div><h3>Zombie detection</h3><p>Subscriptions that stopped charging — and ones you thought you cancelled but didn't.</p></div>
+        <div class="feat"><div class="ic" style="background:#e4e9ff">🔍</div><h3>"Since your last scan"</h3><p>Every re-scan shows what's new, what's gone, and what changed price, so you're never surprised.</p></div>
+        <div class="feat"><div class="ic" style="background:#fdeef6">🔔</div><h3>Monthly monitoring</h3><p>A 30-day check-in by email — automatic if your bank is connected — so new charges don't slip past you.</p></div>
+      </div>
     </div>
-  </main>
+  </section>
+
+  <section id="pricing">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="kicker">Pricing</div>
+        <h2>Less than one forgotten subscription.</h2>
+        <p>The free scan shows your three biggest leaks. Pro shows everything and keeps watching.</p>
+      </div>
+      <div class="plans">
+        <div class="plan">
+          <h3>Free</h3>
+          <div class="price">$0</div>
+          <div class="per">forever</div>
+          <ul><li>Statement scan</li><li>Your top 3 leaks with totals</li><li>Cancel guides</li></ul>
+          <a class="btn" href="/app">Start free</a>
+        </div>
+        <div class="plan pro">
+          <span class="badge">Most popular</span>
+          <h3>Pro</h3>
+          <div class="price">$9.99</div>
+          <div class="per">per month · cancel anytime</div>
+          <ul><li>Every subscription found</li><li>Price-hike alerts</li><li>Refund-window flags + ready-to-send emails</li><li>"Since your last scan" changes</li><li>Monthly monitoring &amp; saved results</li></ul>
+          <a class="btn primary" href="/app">Go Pro</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" style="padding-top:0">
+    <div class="wrap">
+      <div class="sec-head"><div class="kicker">Questions</div><h2>Straight answers.</h2></div>
+      <div class="faq">
+        <details><summary>Is my banking data safe?</summary><p>Uploaded statements are analysed in memory for your session and never written to disk or shared. If you create an account, only the derived subscription list is saved — never your raw transactions. Bank connections use the regulated Consumer Data Right consent flow, so we never see your bank login.</p></details>
+        <details><summary>Which banks work?</summary><p>Statement upload works with CSV exports from all major Australian banks (CBA, Westpac, NAB, ANZ, ING, Up and more). Direct bank connection covers CDR-enabled institutions.</p></details>
+        <details><summary>Do you cancel subscriptions for me?</summary><p>We give you the fastest path — direct cancel links for 30+ services and a pre-written refund email for recent charges — but the final click is always yours, so you stay in control of your accounts.</p></details>
+        <details><summary>How do refunds work?</summary><p>Many services refund a charge if you ask within days of it landing. SubSweep flags charges inside that window and writes the request for you; you send it from your own email.</p></details>
+        <details><summary>Is this financial advice?</summary><p>No. SubSweep is a tool for reviewing your own spending on everyday services. It doesn't recommend financial products or provide financial advice.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="wrap">
+      <div class="closer">
+        <h2>See what you're really paying for.</h2>
+        <p>Two minutes. Free. No card. Just a bank statement and an honest number.</p>
+        <a class="btn primary" href="/app">Scan my statement — free →</a>
+      </div>
+    </div>
+  </section>
 
   <footer>
-    <p><strong>SubSweep</strong> · Privacy-first subscription auditing. Statements processed in memory only.
-       Not financial advice. </p>
+    <div class="wrap">
+      <div><strong style="color:var(--ink)">SubSweep</strong> · Privacy-first subscription auditing for Australians.<br>Not financial advice. Statements processed in memory only.</div>
+      <div><a href="/app">Open the app</a> · <a href="#pricing">Pricing</a> · <a href="#faq">FAQ</a></div>
+    </div>
   </footer>
+
+  <script>
+    const nav = document.getElementById('nav');
+    addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 8), { passive: true });
+  </script>
 </body>
 </html>
