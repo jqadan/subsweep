@@ -68,6 +68,9 @@ main { flex: 1; width: 100%; max-width: 860px; margin: 0 auto; padding: 24px 18p
 
 .fine { font-size: 12px; color: var(--muted); }
 .center { text-align: center; }
+.results-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+.results-toolbar .fine { margin: 0; }
+.btn.waiting { opacity: 0.7; cursor: progress; }
 
 /* Summary banner */
 .summary {
