@@ -303,6 +303,7 @@ app.post('/api/bank/connect', async (req, res) => {
 
 app.post('/api/bank/sync', async (req, res) => {
   const ctx = getContext(req, res);
+  if (!ctx.ws.basiqUserId && ctx.user?.basiqUserId) ctx.ws.basiqUserId = ctx.user.basiqUserId;
   if (!basiq.basiqEnabled() || !ctx.ws.basiqUserId) {
     return res.status(400).json({ error: 'No bank connection in this session' });
   }
