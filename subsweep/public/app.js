@@ -518,12 +518,18 @@ $('#accountBtn').addEventListener('click', async () => {
 });
 
 function renderPills() {
-  $('#planPill').textContent = config.pro ? '⭐ Pro' : `Free plan (top ${config.freeTierLimit} shown)`;
+  const ends = config.pro && config.proEndsAt
+    ? ` · ends ${new Date(config.proEndsAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}`
+    : '';
+  $('#planPill').textContent = config.pro ? `⭐ Pro${ends}` : `Free plan (top ${config.freeTierLimit} shown)`;
+  $('#planPill').title = config.pro && config.proEndsAt
+    ? 'Subscription cancelled — Pro stays active until the end of the paid period. Click to manage billing.'
+    : '';
   $('#planPill').classList.toggle('good', Boolean(config.pro));
   $('#accountBtn').textContent = config.loggedIn ? `👤 ${config.email}` : '👤 Sign up / Log in';
   if (config.pro && config.billing === 'stripe-test' && config.loggedIn) {
     $('#planPill').style.cursor = 'pointer';
-    $('#planPill').title = 'Manage billing';
+    if (!config.proEndsAt) $('#planPill').title = 'Manage billing';
     $('#planPill').onclick = openPortal;
   }
 }
