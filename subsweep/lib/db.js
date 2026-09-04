@@ -31,6 +31,13 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_users_stripe ON users (stripe_customer_id);
 `);
 
+// Additive migrations for databases created before a column existed.
+const userColumns = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
+if (!userColumns.includes('pro_ends_at')) {
+  // ISO date when a cancelled subscription stops (Pro stays on until then)
+  db.exec('ALTER TABLE users ADD COLUMN pro_ends_at TEXT');
+}
+
 // One-time migration from the old JSON file store.
 const LEGACY_FILE = path.join(DATA_DIR, 'users.json');
 export function migrateLegacyStore() {
