@@ -33,12 +33,18 @@ function matchCadence(gapsDays) {
   return null;
 }
 
+// Recurring debits that are bank plumbing, not subscriptions: loan and
+// mortgage repayments, interest, transfers between accounts, card payments,
+// cash withdrawals. Only applied to merchants we don't already recognise.
+const BANK_INTERNAL = /\b(transfer|trf|loan|mortgage|home loan|interest( charged)?|repayment|redraw|offset|atm|withdrawal|cash out|credit card (payment|pymt)|card payment|savings|term deposit|bpay .*(card|loan))\b/i;
+
 export function detectSubscriptions(transactions, { now = new Date() } = {}) {
   const outgoing = transactions.filter((t) => t.amount < 0);
 
   const groups = new Map();
   for (const t of outgoing) {
     const known = identifyMerchant(t.description);
+    if (!known && BANK_INTERNAL.test(t.description)) continue;
     const key = known ? `kb:${known.key}` : `raw:${normaliseDescription(t.description)}`;
     if (!key.replace(/^(kb|raw):/, '')) continue;
     if (!groups.has(key)) groups.set(key, { known, charges: [] });
