@@ -75,13 +75,26 @@ async function refreshBankStatus() {
   renderBankState();
 }
 
-function setBankStatus(msg) {
-  const el = $('#bankStatus');
-  if (!el) return;
-  el.hidden = !msg;
-  el.textContent = msg || '';
-  const hint = $('#bankHint');
-  if (hint && config.bankConnect === 'available') hint.textContent = msg || '';
+// Shows the waiting message in both the onboarding card and the results
+// toolbar, with a Cancel link so the user is never stuck in the poll.
+function setBankStatus(msg, { cancellable = false } = {}) {
+  const targets = [$('#bankStatus'), config.bankConnect === 'available' ? $('#bankHint') : null].filter(Boolean);
+  for (const el of targets) {
+    el.hidden = !msg;
+    el.textContent = msg || '';
+    if (msg && cancellable) {
+      el.append(' ');
+      const cancel = document.createElement('button');
+      cancel.type = 'button';
+      cancel.className = 'linklike';
+      cancel.textContent = 'Cancel';
+      cancel.addEventListener('click', () => {
+        stopBankPoll();
+        toast('Stopped waiting. Click Connect bank whenever you are ready.', 'ok', 6000);
+      });
+      el.append(cancel);
+    }
+  }
 }
 
 function stopBankPoll() {
@@ -108,7 +121,7 @@ async function trySync() {
     }
     setBankStatus(sync.reason === 'no-transactions-yet'
       ? 'Bank connected — waiting for transactions to arrive…'
-      : 'Waiting for you to finish the bank consent in the other tab…');
+      : 'Waiting for you to finish the bank consent in the other tab…', { cancellable: true });
   } catch (err) {
     // Session lost its Basiq user (e.g. server restart): stop and let the user retry.
     stopBankPoll();
@@ -135,13 +148,20 @@ function startBankPoll() {
   }, 5000);
   document.addEventListener('visibilitychange', bankPoll.onFocus);
   window.addEventListener('focus', bankPoll.onFocus);
-  bankButtons().forEach((b) => { b.disabled = true; b.classList.add('waiting'); });
-  setBankStatus('Waiting for you to finish the bank consent in the other tab…');
+  // Connect bank stays clickable (it re-opens the consent tab); only the
+  // re-sync / disconnect actions pause while we wait.
+  bankButtons().forEach((b) => {
+    b.classList.add('waiting');
+    if (!['bankConnectBtn', 'resultsBankBtn'].includes(b.id)) b.disabled = true;
+  });
+  setBankStatus('Waiting for you to finish the bank consent in the other tab…', { cancellable: true });
 }
 
 async function connectBank() {
   // Already connected? The button reads "Re-sync" — just pull fresh data.
-  if (bankState.connected) return resyncBank();
+  if (bankState.connected && !bankPoll) return resyncBank();
+  // Clicking again while waiting starts a fresh consent (new token, new tab).
+  stopBankPoll();
   try {
     const out = await api('/api/bank/connect', { method: 'POST' });
     const tab = window.open(out.consentUrl, '_blank');
