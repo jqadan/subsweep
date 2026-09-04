@@ -56,10 +56,13 @@ app.post('/api/stripe/webhook', express.raw({ type: '*/*' }), (req, res) => {
     case 'customer.subscription.updated': {
       // Portal cancellations are "cancel at period end": the customer keeps
       // Pro until then, so we record the end date instead of dropping them.
+      // Newer Stripe API versions express a scheduled cancellation as a
+      // `cancel_at` timestamp (cancel_at_period_end stays false) and keep the
+      // period end on the subscription item, so check every shape.
       const active = ['active', 'trialing', 'past_due'].includes(obj.status);
-      const endsAt = active && obj.cancel_at_period_end && (obj.cancel_at || obj.current_period_end)
-        ? new Date((obj.cancel_at || obj.current_period_end) * 1000).toISOString()
-        : null;
+      const periodEnd = obj.current_period_end || obj.items?.data?.[0]?.current_period_end || null;
+      const cancelTs = obj.cancel_at || (obj.cancel_at_period_end ? periodEnd : null);
+      const endsAt = active && cancelTs ? new Date(cancelTs * 1000).toISOString() : null;
       if (user) users.updateUser(user.id, { pro: active, proEndsAt: endsAt });
       break;
     }
