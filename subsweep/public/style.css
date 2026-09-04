@@ -71,7 +71,7 @@ main { flex: 1; width: 100%; max-width: 860px; margin: 0 auto; padding: 24px 18p
 .center { text-align: center; }
 .results-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
 .results-toolbar .fine { margin: 0; }
-.btn.waiting { opacity: 0.7; cursor: progress; }
+.btn.waiting:disabled { opacity: 0.7; cursor: progress; }
 .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .connected-line { margin: 4px 0 10px; font-size: 14px; }
 
