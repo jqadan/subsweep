@@ -48,14 +48,21 @@ app.post('/api/stripe/webhook', express.raw({ type: '*/*' }), (req, res) => {
   switch (event.type) {
     case 'checkout.session.completed':
     case 'invoice.paid':
-      if (user) users.updateUser(user.id, { pro: true, stripeCustomerId: customerId || user.stripeCustomerId });
+      if (user) users.updateUser(user.id, { pro: true, proEndsAt: null, stripeCustomerId: customerId || user.stripeCustomerId });
       break;
     case 'customer.subscription.deleted':
-      if (user) users.updateUser(user.id, { pro: false });
+      if (user) users.updateUser(user.id, { pro: false, proEndsAt: null });
       break;
-    case 'customer.subscription.updated':
-      if (user) users.updateUser(user.id, { pro: ['active', 'trialing', 'past_due'].includes(obj.status) });
+    case 'customer.subscription.updated': {
+      // Portal cancellations are "cancel at period end": the customer keeps
+      // Pro until then, so we record the end date instead of dropping them.
+      const active = ['active', 'trialing', 'past_due'].includes(obj.status);
+      const endsAt = active && obj.cancel_at_period_end && (obj.cancel_at || obj.current_period_end)
+        ? new Date((obj.cancel_at || obj.current_period_end) * 1000).toISOString()
+        : null;
+      if (user) users.updateUser(user.id, { pro: active, proEndsAt: endsAt });
       break;
+    }
     default:
       break; // acknowledge everything else
   }
@@ -196,6 +203,7 @@ app.get('/api/config', (req, res) => {
     bankConnect: basiq.basiqEnabled() ? 'available' : 'not-configured',
     billing: stripeEnabled() ? 'stripe-test' : 'demo',
     pro: isPro(ctx),
+    proEndsAt: ctx.user?.proEndsAt || null,
     loggedIn: Boolean(ctx.user),
     email: ctx.user?.email || null,
     verified: ctx.user ? users.isVerified(ctx.user) : null,
