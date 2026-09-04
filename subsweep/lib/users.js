@@ -32,6 +32,7 @@ function rowToUser(row) {
     pro: Boolean(row.pro),
     emailVerified: Boolean(row.email_verified),
     stripeCustomerId: row.stripe_customer_id,
+    proEndsAt: row.pro_ends_at || null,
     basiqUserId: row.basiq_user_id,
     savedAnalysis: row.saved_analysis ? JSON.parse(row.saved_analysis) : null,
     monitoring: row.monitoring ? JSON.parse(row.monitoring) : { enabled: false, lastScanAt: null, lastReminderAt: null },
@@ -44,6 +45,7 @@ const COLUMN_FOR = {
   pro: { col: 'pro', map: (v) => (v ? 1 : 0) },
   emailVerified: { col: 'email_verified', map: (v) => (v ? 1 : 0) },
   stripeCustomerId: { col: 'stripe_customer_id', map: (v) => v },
+  proEndsAt: { col: 'pro_ends_at', map: (v) => v || null },
   basiqUserId: { col: 'basiq_user_id', map: (v) => v },
   savedAnalysis: { col: 'saved_analysis', map: (v) => (v == null ? null : JSON.stringify(v)) },
   monitoring: { col: 'monitoring', map: (v) => (v == null ? null : JSON.stringify(v)) }
