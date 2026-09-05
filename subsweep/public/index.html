@@ -7,7 +7,11 @@
   <meta name="description" content="Upload a bank statement or connect your bank. SubSweep finds every recurring charge, flags price hikes and refund windows, and gives you cancel links and ready-to-send refund emails. Built for Australian banks." />
   <meta property="og:title" content="SubSweep — find the subscriptions you forgot you're paying for" />
   <meta property="og:description" content="See what your subscriptions really cost per year, catch price hikes, and claim refunds. Free scan, no card required." />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧹</text></svg>" />
+  <link rel="icon" type="image/svg+xml" href="/brand/icon.svg" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/brand/icon-192.png" />
+  <link rel="apple-touch-icon" href="/brand/icon-180.png" />
+  <meta property="og:image" content="https://www.subsweep.com.au/brand/social.png" />
+  <meta name="twitter:card" content="summary_large_image" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -47,7 +51,7 @@
     .nav.scrolled { border-bottom-color: var(--line); }
     .nav .wrap { display: flex; align-items: center; gap: 24px; height: 68px; }
     .logo { display: flex; align-items: center; gap: 10px; font-family: "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 20px; text-decoration: none; }
-    .logo .mark { width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); display: grid; place-items: center; font-size: 18px; box-shadow: 0 6px 16px -6px rgba(91, 61, 245, 0.6); }
+    .logo .mark { width: 34px; height: 34px; border-radius: 10px; display: block; box-shadow: 0 6px 16px -6px rgba(91, 61, 245, 0.6); }
     .nav-links { display: flex; gap: 26px; margin-left: auto; font-size: 14.5px; font-weight: 500; color: var(--ink-2); }
     .nav-links a { text-decoration: none; }
     .nav-links a:hover { color: var(--brand); }
@@ -166,7 +170,7 @@
 <body>
   <nav class="nav" id="nav">
     <div class="wrap">
-      <a class="logo" href="/"><span class="mark">🧹</span>SubSweep</a>
+      <a class="logo" href="/"><img class="mark" src="/brand/icon.svg" alt="" width="34" height="34" />SubSweep</a>
       <div class="nav-links">
         <a href="#how">How it works</a>
         <a href="#features">Features</a>
