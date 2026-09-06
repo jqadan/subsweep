@@ -108,6 +108,85 @@
     <p><strong>Privacy:</strong> statements are analysed in memory for your session only and never
        written to disk or shared. Bank connections use the official Consumer Data Right consent flow.
        SubSweep helps you review your own spending — it does not provide financial product advice.</p>
+    <p class="fine center"><a href="/privacy">Privacy policy</a> · <a href="/cdr-policy">CDR policy</a> · <a href="/terms">Terms</a></p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>        <div class="card">
+          <h3>📄 Upload a statement</h3>
+          <p>Export a CSV from your bank's website (any Australian bank format works).
+             Processed in memory only — never stored.</p>
+          <label class="btn primary file-btn">Choose CSV file
+            <input type="file" id="fileInput" accept=".csv,text/csv" hidden />
+          </label>
+        </div>
+        <div class="card">
+          <h3>🏦 Connect your bank</h3>
+          <p>Live open-banking connection via Basiq's official CDR consent flow.</p>
+          <div id="bankNotConnected">
+            <button class="btn" id="bankConnectBtn">Connect bank</button>
+          </div>
+          <div id="bankConnected" hidden>
+            <p class="connected-line">✅ Connected to <strong id="bankName"></strong></p>
+            <div class="btn-row">
+              <button class="btn primary" id="bankResyncBtn">Re-sync transactions</button>
+              <button class="btn" id="bankDisconnectBtn">Disconnect / switch bank</button>
+            </div>
+            <p class="fine">To use a different bank, disconnect first — then Connect bank will
+               open a fresh consent for the new bank.</p>
+          </div>
+          <p class="fine" id="bankHint"></p>
+        </div>
+        <div class="card">
+          <h3>✨ Just looking?</h3>
+          <p>Load a realistic sample statement and see what SubSweep finds.</p>
+          <button class="btn" id="sampleBtn">Try with sample data</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Results -->
+    <section id="results" hidden>
+      <div class="results-toolbar">
+        <button class="btn" id="resetBtn">↩ Start over with different data</button>
+        <button class="btn" id="resultsBankBtn">🏦 Connect bank</button>
+        <button class="btn" id="resultsDisconnectBtn" hidden>Disconnect bank</button>
+        <span class="fine" id="bankStatus" hidden></span>
+      </div>
+      <div class="rescan-banner" id="rescanBanner" hidden></div>
+      <div class="summary" id="summary"></div>
+      <div class="changes" id="changesPanel" hidden></div>
+      <div class="monitor-bar" id="monitorBar" hidden></div>
+      <div id="subList"></div>
+      <div class="upsell" id="upsell" hidden></div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <!-- Auth modal -->
+  <div class="modal-backdrop" id="authModal" hidden>
+    <div class="modal">
+      <button class="modal-close" id="authClose">✕</button>
+      <h3 id="authTitle">Create your account</h3>
+      <p class="fine">Your analysis is saved to your account (derived results only — never your raw statement).</p>
+      <form id="authForm">
+        <label>Email<br /><input type="email" id="authEmail" required autocomplete="email" /></label>
+        <label>Password<br /><input type="password" id="authPassword" required minlength="8" autocomplete="current-password" /></label>
+        <button class="btn primary" type="submit" id="authSubmit">Sign up</button>
+      </form>
+      <p class="fine center">
+        <button class="linklike" id="authToggle">Already have an account? Log in</button>
+        <button class="linklike" id="authForgot" hidden>Forgot password?</button>
+      </p>
+    </div>
+  </div>
+
+  <footer>
+    <p><strong>Privacy:</strong> statements are analysed in memory for your session only and never
+       written to disk or shared. Bank connections use the official Consumer Data Right consent flow.
+       SubSweep helps you review your own spending — it does not provide financial product advice.</p>
   </footer>
 
   <script src="app.js"></script>
