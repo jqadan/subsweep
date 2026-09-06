@@ -1,0 +1,63 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="icon" type="image/svg+xml" href="/brand/icon.svg" /><link rel="stylesheet" href="/legal/_style.css" /><title>Privacy policy — SubSweep</title></head><body>
+<nav class="nav"><a class="logo" href="/"><img src="/brand/icon.svg" alt="" />SubSweep</a><div class="links"><a href="/privacy">Privacy</a><a href="/cdr-policy">CDR policy</a><a href="/terms">Terms</a><a href="/app">Open the app</a></div></nav>
+<main>
+<h1>Privacy policy</h1>
+<p class="meta">Effective {{EFFECTIVE}} · Applies to www.subsweep.com.au and the SubSweep app</p>
+
+<p>SubSweep is operated by {{ENTITY}}{{ABN_CLAUSE}} ("SubSweep", "we", "us"). We are bound by the Australian Privacy Act 1988 and the Australian Privacy Principles, and, for bank data obtained through open banking, by the Consumer Data Right rules (see our separate <a href="/cdr-policy">CDR policy</a>).</p>
+
+<p>The short version: we analyse your transactions to find recurring charges, we keep only the results, and we never sell or share your data with advertisers.</p>
+
+<h2>1. What we collect</h2>
+<table>
+<tr><th>Data</th><th>Where it comes from</th><th>Why</th></tr>
+<tr><td>Email address and a hashed password</td><td>You, when you create an account</td><td>To log you in and send account emails</td></tr>
+<tr><td>Bank transactions you upload as a CSV file</td><td>You</td><td>Processed in memory to detect recurring charges. <strong>Never written to disk.</strong></td></tr>
+<tr><td>Bank transactions from a connected bank</td><td>Basiq, with your explicit consent</td><td>Same purpose. Held in memory for your session only. See the CDR policy.</td></tr>
+<tr><td>Your analysis results (merchant names, amounts, cadence, totals)</td><td>Derived by us from the data above</td><td>Saved to your account so your dashboard is there when you return and so monthly monitoring can spot changes</td></tr>
+<tr><td>Subscription and payment status</td><td>Stripe</td><td>To know whether you are on the free or Pro plan. We never see or store your card number.</td></tr>
+<tr><td>Basic technical data (IP address, browser, pages viewed)</td><td>Your browser</td><td>Security, rate limiting and fixing errors</td></tr>
+</table>
+
+<h2>2. What we do not do</h2>
+<ul>
+<li>We do not store raw transactions or statements. Uploads and bank data are processed in memory and discarded when your session ends.</li>
+<li>We do not sell, rent or share personal information with advertisers or data brokers.</li>
+<li>We do not use your data to train models or for any purpose other than running SubSweep for you.</li>
+<li>We do not provide financial product advice. SubSweep helps you review your own spending on subscriptions and does not recommend financial products.</li>
+</ul>
+
+<h2>3. Who we share data with</h2>
+<p>Only the service providers needed to run SubSweep, each limited to its role:</p>
+<div class="card">
+<p><strong>Basiq Pty Ltd</strong> (Australia) — accredited data recipient that retrieves your bank transactions under the Consumer Data Right when you connect a bank. Basiq's own privacy and CDR policies apply to its handling of your data.</p>
+<p><strong>Stripe</strong> — processes payments for SubSweep Pro. Card details are entered on Stripe's pages and never reach our servers.</p>
+<p><strong>Resend</strong> — sends account emails (verification, password reset, monthly monitoring).</p>
+<p><strong>Railway</strong> — hosts the application and database. Servers may be located outside Australia; we protect data in transit with TLS and at rest with access controls.</p>
+</div>
+<p>We may also disclose information where the law requires it.</p>
+
+<h2>4. Security</h2>
+<p>All traffic is encrypted with HTTPS. Passwords are stored as salted scrypt hashes. Sessions use signed, HTTP-only cookies. Access to production systems is limited to the people who operate the service. No system is perfectly secure, so please use a unique password.</p>
+
+<h2>5. How long we keep data</h2>
+<ul>
+<li>Raw transaction data: not kept. Discarded from memory at the end of your session or when you start over.</li>
+<li>Analysis results and account details: for as long as your account exists.</li>
+<li>Anonymous visitors: nothing is kept after the session ends.</li>
+</ul>
+
+<h2>6. Your rights</h2>
+<p>You can access or correct your account details in the app. To delete your account and all associated data, disconnect any bank first, then email <a href="mailto:{{EMAIL}}">{{EMAIL}}</a> from your account address. We will confirm deletion within 10 business days. You can also turn off monthly monitoring at any time from the dashboard or the unsubscribe link in any monitoring email.</p>
+
+<h2>7. Cookies</h2>
+<p>We use only the cookies needed to keep you logged in and to keep anonymous sessions separate. We do not use advertising or cross-site tracking cookies.</p>
+
+<h2>8. Complaints</h2>
+<p>If you have a concern about how we handle your information, email <a href="mailto:{{EMAIL}}">{{EMAIL}}</a> and we will respond within 30 days. If you are not satisfied, you can contact the Office of the Australian Information Commissioner at <a href="https://www.oaic.gov.au" rel="noopener">oaic.gov.au</a>.</p>
+
+<h2>9. Changes</h2>
+<p>We will post any changes to this policy on this page and update the effective date. Material changes will also be emailed to account holders.</p>
+</main>
+<footer>© {{YEAR}} {{ENTITY}} · <a href="/privacy">Privacy policy</a><a href="/cdr-policy">CDR policy</a><a href="/terms">Terms</a><a href="mailto:{{EMAIL}}">{{EMAIL}}</a></footer>
+</body></html>
