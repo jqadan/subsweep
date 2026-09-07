@@ -16,7 +16,10 @@ generated refund-request email, and per-merchant cancel links.
    the Connect Bank button lights up, using Basiq's hosted consent UI. A free
    sandbox key from [basiq.io](https://basiq.io) connects simulated test banks
    immediately; production access requires a CDR representative agreement
-   with Basiq (or Frollo/Adatree).
+   with Basiq (or Frollo/Adatree). The app shows which bank is connected
+   and offers **Re-sync** and **Disconnect / switch bank** (deletes the Basiq
+   connections via `POST /api/bank/disconnect`), so changing banks is an
+   explicit in-app step rather than something done inside Basiq's UI.
 3. **Sample data** — one click, seeded with a price hike, a refund-window
    charge, and a lapsed subscription so the demo shows every feature.
 
@@ -26,7 +29,7 @@ Freemium: free plan shows the top 3 leaks; **SubSweep Pro** unlocks the full
 list and refund emails.
 
 - No Stripe key → demo mode: upgrade is simulated, no card form anywhere.
-- `STRIPE_SECRET_KEY` (**test keys only** — `sk_live_` is refused at startup)
+- `STRIPE_SECRET_KEY` (`sk_test_` for test mode, `sk_live_` for real payments)
   + `STRIPE_PRICE_ID` (a recurring Price) → real Stripe Checkout subscription
   flow in test mode. Subscription state is driven by **webhooks**
   (`POST /api/stripe/webhook`, verified against `STRIPE_WEBHOOK_SECRET`:
@@ -111,9 +114,11 @@ npm start        # http://localhost:3100
 | --- | --- |
 | `PORT` | default 3100 |
 | `BASIQ_API_KEY` | enables bank connect (sandbox or production key) |
-| `STRIPE_SECRET_KEY` | `sk_test_...` enables Stripe subscription checkout |
+| `BASIQ_LIVE` | `true` once Basiq has enabled the application for real institutions; otherwise the UI labels bank connect as a preview |
+| `STRIPE_SECRET_KEY` | `sk_test_...` or `sk_live_...` enables Stripe subscription checkout (test mode is labelled in the UI) |
 | `STRIPE_PRICE_ID` | the recurring Price for SubSweep Pro |
 | `BASE_URL` | public URL for Stripe redirects |
+| `LEGAL_ENTITY`, `LEGAL_ABN`, `CONTACT_EMAIL` | fill the operating entity into `/privacy`, `/cdr-policy`, `/terms` |
 
 ## Positioning note
 

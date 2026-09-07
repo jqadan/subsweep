@@ -290,7 +290,7 @@ async function loadAnalysis() {
       <h3>🔒 ${data.lockedCount} more subscription${data.lockedCount === 1 ? '' : 's'} found</h3>
       <p>Upgrade to SubSweep Pro to see everything, get refund-request emails, and keep monitoring for new charges.</p>
       <button class="btn primary" id="upgradeBtn">
-        ${config.billing === 'stripe-test' ? 'Upgrade — A$9.99/mo (Stripe test mode)' : 'Upgrade to Pro (demo — simulated)'}
+        ${stripeBilling() ? `Upgrade — A$9.99/mo${config.billing === 'stripe-test' ? ' (test mode)' : ''}` : 'Upgrade to Pro (demo — simulated)'}
       </button>`;
     $('#upgradeBtn').addEventListener('click', upgrade);
   } else {
@@ -380,10 +380,12 @@ async function renderMonitorBar() {
 }
 
 // ---------- billing ----------
+const stripeBilling = () => /^stripe/.test(config.billing || '');
+
 async function upgrade() {
   try {
     const out = await api('/api/billing/upgrade', { method: 'POST' });
-    if (out.mode === 'stripe-test') {
+    if (out.checkoutUrl) {
       window.location.href = out.checkoutUrl;
       return;
     }
@@ -527,7 +529,7 @@ function renderPills() {
     : '';
   $('#planPill').classList.toggle('good', Boolean(config.pro));
   $('#accountBtn').textContent = config.loggedIn ? `👤 ${config.email}` : '👤 Sign up / Log in';
-  if (config.pro && config.billing === 'stripe-test' && config.loggedIn) {
+  if (config.pro && stripeBilling() && config.loggedIn) {
     $('#planPill').style.cursor = 'pointer';
     if (!config.proEndsAt) $('#planPill').title = 'Manage billing';
     $('#planPill').onclick = openPortal;
@@ -537,9 +539,15 @@ function renderPills() {
 // ---------- init ----------
 (async function init() {
   config = await api('/api/config');
-  $('#bankPill').textContent = config.bankConnect === 'available' ? '🏦 Bank connect ready' : '🏦 Bank connect: needs BASIQ_API_KEY';
-  if (config.bankConnect === 'available') $('#bankPill').classList.add('good');
-  else {
+  if (config.bankConnect === 'available') {
+    $('#bankPill').textContent = '🏦 Bank connect ready';
+    $('#bankPill').classList.add('good');
+  } else if (config.bankConnect === 'sandbox') {
+    $('#bankPill').textContent = '🏦 Bank connect: preview';
+    $('#bankPill').title = 'Bank connection currently reaches test banks only. Upload a CSV for your real accounts.';
+    $('#bankHint').textContent = 'Preview: bank connection currently reaches test banks only while our open-banking access is finalised. For your real accounts, upload a CSV statement.';
+  } else {
+    $('#bankPill').textContent = '🏦 Bank connect: needs BASIQ_API_KEY';
     bankButtons().forEach((b) => { b.disabled = true; });
     $('#bankHint').textContent = 'Set BASIQ_API_KEY to enable (free sandbox key from basiq.io works).';
   }

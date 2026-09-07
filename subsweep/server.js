@@ -16,11 +16,9 @@ import {
   sendVerificationEmail, sendResetEmail, checkVerifyToken, checkResetToken, rateLimited
 } from './lib/accountEmails.js';
 import {
-  stripeEnabled, refuseLiveKey, ensureCustomer,
+  stripeEnabled, stripeMode, ensureCustomer,
   createSubscriptionCheckout, createPortalSession, verifyWebhookSignature
 } from './lib/stripe.js';
-
-refuseLiveKey();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -221,8 +219,9 @@ app.get('/api/auth/me', (req, res) => {
 app.get('/api/config', (req, res) => {
   const ctx = getContext(req, res);
   res.json({
-    bankConnect: basiq.basiqEnabled() ? 'available' : 'not-configured',
-    billing: stripeEnabled() ? 'stripe-test' : 'demo',
+    // 'available' = production Basiq key, 'sandbox' = Basiq test banks only.
+    bankConnect: basiq.basiqEnabled() ? (basiq.basiqLive() ? 'available' : 'sandbox') : 'not-configured',
+    billing: stripeEnabled() ? (stripeMode() === 'live' ? 'stripe' : 'stripe-test') : 'demo',
     pro: isPro(ctx),
     proEndsAt: ctx.user?.proEndsAt || null,
     loggedIn: Boolean(ctx.user),
@@ -392,7 +391,7 @@ app.post('/api/billing/upgrade', async (req, res) => {
       if (customerId !== ctx.user.stripeCustomerId) users.updateUser(ctx.user.id, { stripeCustomerId: customerId });
       const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
       const session = await createSubscriptionCheckout({ customerId, userId: ctx.user.id, baseUrl });
-      return res.json({ mode: 'stripe-test', checkoutUrl: session.url });
+      return res.json({ mode: stripeMode() === 'live' ? 'stripe' : 'stripe-test', checkoutUrl: session.url });
     }
     // Demo mode: simulated upgrade, no card details anywhere
     if (ctx.user) users.updateUser(ctx.user.id, { pro: true });
@@ -428,7 +427,7 @@ if (process.env.DISABLE_MONITORING_TICK !== '1') {
 
 app.listen(PORT, () => {
   console.log(`SubSweep running at http://localhost:${PORT}`);
-  console.log(`Bank connect: ${basiq.basiqEnabled() ? 'Basiq configured' : 'not configured (statement upload only)'}`);
-  console.log(`Billing: ${stripeEnabled() ? 'Stripe TEST subscriptions + webhooks' : 'demo (simulated upgrade)'}`);
+  console.log(`Bank connect: ${basiq.basiqEnabled() ? (basiq.basiqLive() ? 'Basiq PRODUCTION' : 'Basiq sandbox (test banks only)') : 'not configured (statement upload only)'}`);
+  console.log(`Billing: ${stripeEnabled() ? `Stripe ${stripeMode().toUpperCase()} subscriptions + webhooks` : 'demo (simulated upgrade)'}`);
   console.log(`Monitoring: hourly tick, ${CYCLE_DAYS}-day cycle, email via ${emailBackend()}`);
 });

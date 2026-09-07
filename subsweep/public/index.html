@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SubSweep — find the subscriptions you forgot you're paying for</title>
-  <meta name="description" content="Upload a bank statement or connect your bank. SubSweep finds every recurring charge, flags price hikes and refund windows, and gives you cancel links and ready-to-send refund emails. Built for Australian banks." />
+  <meta name="description" content="Upload a bank statement and SubSweep finds every recurring charge, flags price hikes and refund windows, and gives you cancel links and ready-to-send refund emails. Built for Australian banks." />
   <meta property="og:title" content="SubSweep — find the subscriptions you forgot you're paying for" />
   <meta property="og:description" content="See what your subscriptions really cost per year, catch price hikes, and claim refunds. Free scan, no card required." />
   <link rel="icon" type="image/svg+xml" href="/brand/icon.svg" />
@@ -187,7 +187,7 @@
       <div>
         <div class="eyebrow"><span class="dot"></span> Built for Australian banks</div>
         <h1 class="display">Find the subscriptions you <em>forgot</em> you're paying for.</h1>
-        <p class="lede">Upload a bank statement — or connect your bank — and SubSweep finds every recurring charge, shows what it really costs you per year, flags price hikes, and helps you claim refunds on recent charges.</p>
+        <p class="lede">Upload a bank statement and SubSweep finds every recurring charge, shows what it really costs you per year, flags price hikes, and helps you claim refunds on recent charges.</p>
         <div class="cta-row">
           <a class="btn primary" href="/app">Scan my statement — free →</a>
           <a class="btn" href="/app" onclick="sessionStorage.setItem('demo','1')">See a live demo</a>
@@ -217,7 +217,7 @@
   <div class="trust">
     <div class="wrap">
       <div class="item"><span class="i">🔒</span><div><b>Never stored</b>Statements are processed in memory and discarded.</div></div>
-      <div class="item"><span class="i">🏦</span><div><b>Official bank consent</b>Bank connection uses the regulated CDR flow — we never see your login.</div></div>
+      <div class="item"><span class="i">🏦</span><div><b>Official bank consent</b>Direct bank connection (coming soon) uses the regulated CDR flow — we never see your login.</div></div>
       <div class="item"><span class="i">🇦🇺</span><div><b>All major AU banks</b>CBA, Westpac, NAB, ANZ, ING, Up and more.</div></div>
       <div class="item"><span class="i">💳</span><div><b>Free to start</b>See your top leaks with no card, no commitment.</div></div>
     </div>
@@ -231,7 +231,7 @@
         <p>No spreadsheets, no scrolling through twelve months of transactions. SubSweep does the reading for you.</p>
       </div>
       <div class="steps">
-        <div class="step"><div class="n">1</div><h3>Add your transactions</h3><p>Export a CSV from your bank's website — every Australian bank has this — or connect securely through open banking.</p><div class="mini">Date, Description, Amount<br>01/08/2026, NETFLIX.COM, -22.99<br>03/08/2026, ADOBE CREATIVE CLOUD, -43.99</div></div>
+        <div class="step"><div class="n">1</div><h3>Add your transactions</h3><p>Export a CSV from your bank's website — every Australian bank has this. Direct open-banking connection is coming soon.</p><div class="mini">Date, Description, Amount<br>01/08/2026, NETFLIX.COM, -22.99<br>03/08/2026, ADOBE CREATIVE CLOUD, -43.99</div></div>
         <div class="step"><div class="n">2</div><h3>We find the recurring charges</h3><p>Our detector separates real subscriptions from everyday spending — weekly, monthly, quarterly or yearly — and totals what they cost you.</p><div class="mini">✓ Netflix — monthly, 12 charges<br>✓ Adobe — monthly, 8 charges<br>✗ Woolworths — irregular, skipped</div></div>
         <div class="step"><div class="n">3</div><h3>Cancel, claim, and keep watching</h3><p>Direct cancel links for 30+ services, refund emails for charges still in the refund window, and monthly re-checks so nothing creeps back.</p><div class="mini">→ Cancel guide<br>→ Refund email (ready to send)<br>→ Monthly monitoring: on</div></div>
       </div>
@@ -287,7 +287,7 @@
       <div class="sec-head"><div class="kicker">Questions</div><h2>Straight answers.</h2></div>
       <div class="faq">
         <details><summary>Is my banking data safe?</summary><p>Uploaded statements are analysed in memory for your session and never written to disk or shared. If you create an account, only the derived subscription list is saved — never your raw transactions. Bank connections use the regulated Consumer Data Right consent flow, so we never see your bank login.</p></details>
-        <details><summary>Which banks work?</summary><p>Statement upload works with CSV exports from all major Australian banks (CBA, Westpac, NAB, ANZ, ING, Up and more). Direct bank connection covers CDR-enabled institutions.</p></details>
+        <details><summary>Which banks work?</summary><p>Statement upload works with CSV exports from all major Australian banks (CBA, Westpac, NAB, ANZ, ING, Up and more). Direct bank connection through the CDR is in preview and will cover all CDR-enabled institutions once our open-banking access is finalised.</p></details>
         <details><summary>Do you cancel subscriptions for me?</summary><p>We give you the fastest path — direct cancel links for 30+ services and a pre-written refund email for recent charges — but the final click is always yours, so you stay in control of your accounts.</p></details>
         <details><summary>How do refunds work?</summary><p>Many services refund a charge if you ask within days of it landing. SubSweep flags charges inside that window and writes the request for you; you send it from your own email.</p></details>
         <details><summary>Is this financial advice?</summary><p>No. SubSweep is a tool for reviewing your own spending on everyday services. It doesn't recommend financial products or provide financial advice.</p></details>

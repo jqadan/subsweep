@@ -16,6 +16,12 @@ export function basiqEnabled() {
   return Boolean(process.env.BASIQ_API_KEY);
 }
 
+// Set BASIQ_LIVE=true once the application has been enabled for production
+// (real institutions). Until then the key only reaches Basiq's test banks.
+export function basiqLive() {
+  return /^(1|true|yes)$/i.test(process.env.BASIQ_LIVE || '');
+}
+
 async function serverToken() {
   if (cachedServerToken && Date.now() < cachedServerToken.expiresAt) return cachedServerToken.token;
   const res = await fetch(`${BASE}/token`, {

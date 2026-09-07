@@ -1,8 +1,9 @@
 // Stripe Billing via the REST API — subscriptions, webhooks, Customer Portal.
-// Test mode only in this build: live keys are refused at startup.
+// Works with test keys (sk_test_) and live keys (sk_live_); the mode is
+// reported to the client so the UI can label test mode.
 //
-// Production setup:
-//   STRIPE_SECRET_KEY   sk_test_...
+// Setup:
+//   STRIPE_SECRET_KEY   sk_test_... or sk_live_...
 //   STRIPE_PRICE_ID     price_... (recurring)
 //   STRIPE_WEBHOOK_SECRET whsec_... (from the dashboard webhook endpoint,
 //                        pointing at POST /api/stripe/webhook)
@@ -14,15 +15,14 @@ const STRIPE_API = 'https://api.stripe.com/v1';
 export function stripeEnabled() {
   return (
     typeof process.env.STRIPE_SECRET_KEY === 'string' &&
-    process.env.STRIPE_SECRET_KEY.startsWith('sk_test_') &&
+    /^sk_(test|live)_/.test(process.env.STRIPE_SECRET_KEY) &&
     typeof process.env.STRIPE_PRICE_ID === 'string'
   );
 }
 
-export function refuseLiveKey() {
-  if (process.env.STRIPE_SECRET_KEY?.startsWith('sk_live_')) {
-    throw new Error('STRIPE_SECRET_KEY is a LIVE key. This demo build only accepts test keys (sk_test_...).');
-  }
+// 'live' | 'test' (only meaningful when stripeEnabled()).
+export function stripeMode() {
+  return process.env.STRIPE_SECRET_KEY?.startsWith('sk_live_') ? 'live' : 'test';
 }
 
 async function stripeRequest(method, endpoint, params) {
