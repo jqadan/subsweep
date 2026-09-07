@@ -73,6 +73,40 @@ The link is valid for 1 hour and can be used once. If you didn't ask for this, y
 
 // Minimal in-memory rate limit for email-sending endpoints.
 const lastSent = new Map(); // key -> timestamp
+export async function sendProActivatedEmail(user, baseUrl) {
+  return sendEmail({
+    to: user.email,
+    subject: 'SubSweep Pro is active',
+    text:
+`Hi,
+
+Thanks for upgrading. SubSweep Pro is now active on ${user.email}.
+
+You now get every recurring charge we find (not just the first three), refund-request emails, and monthly monitoring for new charges and price hikes.
+
+Open your dashboard: ${baseUrl}/app
+
+Manage or cancel your subscription any time by clicking the Pro badge in the app. Stripe emails your receipts separately.
+
+— SubSweep`
+  });
+}
+
+export async function sendProEndedEmail(user, baseUrl) {
+  return sendEmail({
+    to: user.email,
+    subject: 'Your SubSweep Pro subscription has ended',
+    text:
+`Hi,
+
+Your SubSweep Pro subscription has ended and your account is back on the free plan. Your saved analysis is still there, showing the first three subscriptions.
+
+You can upgrade again at any time: ${baseUrl}/app
+
+— SubSweep`
+  });
+}
+
 export function rateLimited(key, minIntervalMs = 5 * 60 * 1000) {
   const now = Date.now();
   if (now - (lastSent.get(key) || 0) < minIntervalMs) return true;

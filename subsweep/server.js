@@ -13,7 +13,8 @@ import { createSessionCookie, clearSessionCookie, readSession, verifyToken } fro
 import { diffAnalyses, runMonitoringTick, CYCLE_DAYS } from './lib/monitor.js';
 import { emailBackend } from './lib/email.js';
 import {
-  sendVerificationEmail, sendResetEmail, checkVerifyToken, checkResetToken, rateLimited
+  sendVerificationEmail, sendResetEmail, sendProActivatedEmail, sendProEndedEmail,
+  checkVerifyToken, checkResetToken, rateLimited
 } from './lib/accountEmails.js';
 import {
   stripeEnabled, stripeMode, ensureCustomer,
@@ -44,13 +45,24 @@ app.post('/api/stripe/webhook', express.raw({ type: '*/*' }), (req, res) => {
   const customerId = typeof obj.customer === 'string' ? obj.customer : null;
   const user = (userId && users.findById(userId)) || (customerId && users.findByStripeCustomer(customerId));
 
+  const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+  const notify = (fn) => fn(user, baseUrl).catch((err) => console.error('Pro email failed:', err.message));
+
   switch (event.type) {
     case 'checkout.session.completed':
     case 'invoice.paid':
-      if (user) users.updateUser(user.id, { pro: true, proEndsAt: null, stripeCustomerId: customerId || user.stripeCustomerId });
+      if (user) {
+        const wasPro = user.pro;
+        users.updateUser(user.id, { pro: true, proEndsAt: null, stripeCustomerId: customerId || user.stripeCustomerId });
+        // First activation only: renewals get Stripe's receipt, not another welcome.
+        if (!wasPro && event.type === 'checkout.session.completed') notify(sendProActivatedEmail);
+      }
       break;
     case 'customer.subscription.deleted':
-      if (user) users.updateUser(user.id, { pro: false, proEndsAt: null });
+      if (user) {
+        users.updateUser(user.id, { pro: false, proEndsAt: null });
+        if (user.pro) notify(sendProEndedEmail);
+      }
       break;
     case 'customer.subscription.updated': {
       // Portal cancellations are "cancel at period end": the customer keeps
