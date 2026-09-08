@@ -184,3 +184,9 @@ footer {
   .summary .big { font-size: 28px; }
   .sub-cost { text-align: left; margin-left: 0; width: 100%; }
 }
+
+/* Native app shell (mobile/): keep content clear of the notch and home indicator. */
+.native .topbar { padding-top: calc(14px + env(safe-area-inset-top)); }
+.native .brand:hover h1 { text-decoration: none; }
+.native footer { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+.native .toast { bottom: calc(22px + env(safe-area-inset-bottom)); }

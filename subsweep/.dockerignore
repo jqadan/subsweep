@@ -1,3 +1,5 @@
 node_modules
 data
 .env
+# Native app shells are built by CI, not by the server image.
+mobile

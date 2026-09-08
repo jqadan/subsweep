@@ -1,0 +1,167 @@
+name: Mobile apps
+
+# Builds the iOS and Android apps in subsweep/mobile on every push that touches
+# the web app or the native shells. Signed, store-ready builds and the
+# TestFlight / Google Play uploads switch on by themselves once the secrets
+# listed in subsweep/mobile/README.md exist. Until then the jobs still compile
+# everything and attach unsigned artifacts, so a broken build shows up here.
+
+on:
+  push:
+    branches: [claude/subsweep-app]
+    paths:
+      - 'subsweep/public/**'
+      - 'subsweep/mobile/**'
+      - '.github/workflows/mobile.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Build number: unique and increasing for every run, used as Android
+  # versionCode and iOS CFBundleVersion. The marketing version comes from
+  # subsweep/mobile/package.json.
+  APP_BUILD_NUMBER: ${{ github.run_number }}
+
+defaults:
+  run:
+    working-directory: subsweep/mobile
+
+jobs:
+  android:
+    name: Android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: subsweep/mobile/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Install and sync the web bundle
+        run: |
+          npm ci
+          echo "APP_VERSION=$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
+          npm run build:www
+          npx cap sync android
+
+      - name: Restore the upload keystore
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+
+      - name: Build release bundle and debug APK
+        working-directory: subsweep/mobile/android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon bundleRelease assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-${{ env.APP_VERSION }}-${{ github.run_number }}
+          if-no-files-found: error
+          path: |
+            subsweep/mobile/android/app/build/outputs/bundle/release/app-release.aab
+            subsweep/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload to Google Play (internal testing track)
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: au.com.subsweep.app
+          releaseFiles: subsweep/mobile/android/app/build/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed
+
+  ios:
+    name: iOS
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: subsweep/mobile/package-lock.json
+
+      - name: Install and sync the web bundle
+        run: |
+          npm ci
+          echo "APP_VERSION=$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
+          npm run build:www
+          npx cap sync ios
+
+      - name: Build for the simulator (no signing configured)
+        if: ${{ secrets.ASC_KEY_P8_BASE64 == '' }}
+        working-directory: subsweep/mobile/ios
+        run: |
+          xcodebuild build -workspace App/App.xcworkspace -scheme App -configuration Release \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO -quiet
+
+      - name: Restore the App Store Connect API key
+        if: ${{ secrets.ASC_KEY_P8_BASE64 != '' }}
+        env:
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/keys"
+          echo "$ASC_KEY_P8_BASE64" | base64 -d > "$RUNNER_TEMP/keys/AuthKey_${ASC_KEY_ID}.p8"
+          echo "ASC_KEY_PATH=$RUNNER_TEMP/keys/AuthKey_${ASC_KEY_ID}.p8" >> "$GITHUB_ENV"
+
+      - name: Archive, export the IPA and upload to TestFlight
+        if: ${{ secrets.ASC_KEY_P8_BASE64 != '' }}
+        working-directory: subsweep/mobile/ios
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$ASC_KEY_PATH"
+                -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+          xcodebuild archive -workspace App/App.xcworkspace -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath build/App.xcarchive \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            MARKETING_VERSION="$APP_VERSION" CURRENT_PROJECT_VERSION="$APP_BUILD_NUMBER" \
+            "${AUTH[@]}" -quiet
+          cat > build/export.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>export</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive -archivePath build/App.xcarchive -exportOptionsPlist build/export.plist \
+            -exportPath build/ipa "${AUTH[@]}" -quiet
+          # Same archive again, this time straight to App Store Connect (TestFlight).
+          sed -i '' 's#<string>export</string>#<string>upload</string>#' build/export.plist
+          xcodebuild -exportArchive -archivePath build/App.xcarchive -exportOptionsPlist build/export.plist \
+            -exportPath build/upload "${AUTH[@]}" -quiet
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ secrets.ASC_KEY_P8_BASE64 != '' }}
+        with:
+          name: ios-${{ env.APP_VERSION }}-${{ github.run_number }}
+          if-no-files-found: error
+          path: subsweep/mobile/ios/build/ipa/*.ipa

@@ -9,7 +9,7 @@ import { detectSubscriptions, refundEmail } from './lib/detect.js';
 import { sampleTransactions } from './lib/sample.js';
 import * as basiq from './lib/basiq.js';
 import * as users from './lib/users.js';
-import { createSessionCookie, clearSessionCookie, readSession, verifyToken } from './lib/sessions.js';
+import { createSessionCookie, createSessionToken, clearSessionCookie, readSession, verifyToken } from './lib/sessions.js';
 import { diffAnalyses, runMonitoringTick, CYCLE_DAYS } from './lib/monitor.js';
 import { emailBackend } from './lib/email.js';
 import {
@@ -85,6 +85,26 @@ app.post('/api/stripe/webhook', express.raw({ type: '*/*' }), (req, res) => {
 
 app.use(express.json());
 
+// ---- Native apps (mobile/) ----
+// The iOS/Android shells bundle the frontend and call this API from a WebView
+// origin, so those origins get CORS, the session travels as a bearer token
+// (see lib/sessions.js) and the anonymous workspace is pinned by a header
+// instead of the ssid cookie. Browsers on the website are unaffected.
+const NATIVE_ORIGINS = new Set(['capacitor://localhost', 'https://localhost', 'http://localhost', 'ionic://localhost']);
+const isNativeClient = (req) => req.headers['x-subsweep-client'] === 'native';
+app.use('/api', (req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && NATIVE_ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-SubSweep-Client, X-Workspace');
+    res.setHeader('Access-Control-Max-Age', '86400');
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+  }
+  next();
+});
+
 // ---- Static pages: marketing at /, app at /app ----
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/app', (req, res) => res.sendFile(path.join(__dirname, 'public', 'app.html')));
@@ -114,7 +134,10 @@ function getContext(req, res) {
   const userId = readSession(req);
   const user = userId ? users.findById(userId) : null;
   let key = user?.id;
-  if (!key) {
+  const pinned = !key && isNativeClient(req) ? String(req.headers['x-workspace'] || '') : '';
+  if (/^[a-f0-9-]{36}$/.test(pinned)) {
+    key = pinned; // the app keeps its own id, so a server restart just starts an empty workspace
+  } else if (!key) {
     const cookie = (req.headers.cookie || '').match(/ssid=([a-f0-9-]{36})/);
     key = cookie?.[1];
     if (!key || !workspaces.has(key)) {
@@ -153,15 +176,24 @@ function baseUrlOf(req) {
   return process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
 }
 
+// Logs the user in for this response: the cookie for browsers, plus the same
+// signed value as a token for the native apps, which cannot use the cookie.
+function sessionResponse(req, res, user) {
+  res.setHeader('Set-Cookie', createSessionCookie(user.id));
+  const body = { user: users.publicUser(user) };
+  if (isNativeClient(req)) body.token = createSessionToken(user.id);
+  return body;
+}
+
 app.post('/api/auth/signup', (req, res) => {
   try {
     const user = users.createUser({ email: req.body?.email, password: req.body?.password });
-    res.setHeader('Set-Cookie', createSessionCookie(user.id));
+    const session = sessionResponse(req, res, user);
     // Fire-and-forget: a failed email must not block signup.
     sendVerificationEmail(user, baseUrlOf(req)).catch((err) =>
       console.error('[email] verification send failed:', err.message)
     );
-    res.json({ user: users.publicUser(user) });
+    res.json(session);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -204,8 +236,7 @@ app.post('/api/auth/reset', (req, res) => {
   const password = String(req.body?.password || '');
   if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
   users.updateUser(user.id, { passwordHash: users.hashPassword(password), emailVerified: true });
-  res.setHeader('Set-Cookie', createSessionCookie(user.id));
-  res.json({ user: users.publicUser(users.findById(user.id)) });
+  res.json(sessionResponse(req, res, users.findById(user.id)));
 });
 
 app.post('/api/auth/login', (req, res) => {
@@ -213,8 +244,7 @@ app.post('/api/auth/login', (req, res) => {
   if (!user || !users.verifyPassword(req.body?.password || '', user.passwordHash)) {
     return res.status(401).json({ error: 'Invalid email or password' });
   }
-  res.setHeader('Set-Cookie', createSessionCookie(user.id));
-  res.json({ user: users.publicUser(user) });
+  res.json(sessionResponse(req, res, user));
 });
 
 app.post('/api/auth/logout', (req, res) => {

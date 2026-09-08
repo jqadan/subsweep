@@ -29,10 +29,15 @@ function sign(payload) {
   return crypto.createHmac('sha256', secret()).update(payload).digest('base64url');
 }
 
-export function createSessionCookie(userId) {
+// The signed session value. Browsers carry it in the auth cookie; the native
+// apps (subsweep/mobile) store it and send it as a bearer token instead.
+export function createSessionToken(userId) {
   const payload = Buffer.from(JSON.stringify({ uid: userId, exp: Date.now() + SESSION_DAYS * 86400000 })).toString('base64url');
-  const cookie = `${payload}.${sign(payload)}`;
-  return `auth=${cookie}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_DAYS * 86400}`;
+  return `${payload}.${sign(payload)}`;
+}
+
+export function createSessionCookie(userId) {
+  return `auth=${createSessionToken(userId)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_DAYS * 86400}`;
 }
 
 export function clearSessionCookie() {
@@ -58,7 +63,8 @@ export function verifyToken(token) {
 }
 
 export function readSession(req) {
-  const match = (req.headers.cookie || '').match(/auth=([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)/);
+  const match = (req.headers.authorization || '').match(/^Bearer ([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)$/)
+    || (req.headers.cookie || '').match(/auth=([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)/);
   if (!match) return null;
   const [payload, sig] = match[1].split('.');
   const expected = sign(payload);

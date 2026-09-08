@@ -2,6 +2,60 @@ const $ = (s) => document.querySelector(s);
 
 let config = { billing: 'demo', bankConnect: 'not-configured', pro: false, freeTierLimit: 3 };
 
+// ---------- native app shell ----------
+// Inside the iOS/Android apps (see mobile/) this same file runs from a bundled
+// WebView: API calls go to the live server with a bearer token and a pinned
+// workspace id instead of cookies, external pages open in the system browser,
+// and there is no purchase flow because the app stores require their own
+// billing for in-app subscriptions. Pro bought on the website still applies.
+const NATIVE = Boolean(window.Capacitor?.isNativePlatform?.());
+const API_BASE = NATIVE ? (window.SUBSWEEP_API || '') : '';
+const nativePlugin = (name) => window.Capacitor.Plugins?.[name] || window.Capacitor.registerPlugin(name);
+const CONSENT_WHERE = NATIVE ? 'in the browser' : 'in the other tab';
+const PRO_NOTE = 'This account is on the free plan. SubSweep Pro accounts see every subscription, plus refund-request emails and monthly monitoring.';
+let authToken = null;
+let workspaceId = null;
+
+function newWorkspaceId() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+async function loadNativeSession() {
+  const prefs = nativePlugin('Preferences');
+  authToken = (await prefs.get({ key: 'authToken' })).value || null;
+  workspaceId = (await prefs.get({ key: 'workspaceId' })).value || null;
+  if (!workspaceId) {
+    workspaceId = newWorkspaceId();
+    await prefs.set({ key: 'workspaceId', value: workspaceId });
+  }
+}
+
+async function saveAuthToken(token) {
+  authToken = token || null;
+  const prefs = nativePlugin('Preferences');
+  if (token) await prefs.set({ key: 'authToken', value: token });
+  else await prefs.remove({ key: 'authToken' });
+}
+
+function openExternal(url) {
+  return nativePlugin('Browser').open({ url });
+}
+
+if (NATIVE) {
+  document.body.classList.add('native');
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest?.('a[target="_blank"]');
+    if (!link?.href) return;
+    e.preventDefault();
+    openExternal(link.href);
+  });
+}
+
 const aud = (n) => n.toLocaleString('en-AU', { style: 'currency', currency: 'AUD' });
 
 function toast(msg, kind = 'ok', ms = 5000) {
@@ -13,8 +67,13 @@ function toast(msg, kind = 'ok', ms = 5000) {
   el._t = setTimeout(() => (el.hidden = true), ms);
 }
 
-async function api(path, opts) {
-  const res = await fetch(path, opts);
+async function api(path, opts = {}) {
+  if (NATIVE) {
+    const headers = { ...(opts.headers || {}), 'X-SubSweep-Client': 'native', 'X-Workspace': workspaceId };
+    if (authToken) headers.Authorization = `Bearer ${authToken}`;
+    opts = { ...opts, headers };
+  }
+  const res = await fetch(API_BASE + path, opts);
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.error || `Request failed (${res.status})`);
   return json;
@@ -102,6 +161,7 @@ function stopBankPoll() {
   clearInterval(bankPoll.timer);
   document.removeEventListener('visibilitychange', bankPoll.onFocus);
   window.removeEventListener('focus', bankPoll.onFocus);
+  for (const h of bankPoll.handles || []) Promise.resolve(h).then((handle) => handle.remove());
   bankPoll = null;
   bankButtons().forEach((b) => { b.disabled = false; b.classList.remove('waiting'); });
   setBankStatus('');
@@ -121,7 +181,7 @@ async function trySync() {
     }
     setBankStatus(sync.reason === 'no-transactions-yet'
       ? 'Bank connected — waiting for transactions to arrive…'
-      : 'Waiting for you to finish the bank consent in the other tab…', { cancellable: true });
+      : `Waiting for you to finish the bank consent ${CONSENT_WHERE}…`, { cancellable: true });
   } catch (err) {
     // Session lost its Basiq user (e.g. server restart): stop and let the user retry.
     stopBankPoll();
@@ -148,13 +208,20 @@ function startBankPoll() {
   }, 5000);
   document.addEventListener('visibilitychange', bankPoll.onFocus);
   window.addEventListener('focus', bankPoll.onFocus);
+  if (NATIVE) {
+    // Coming back from the system browser does not always fire focus events.
+    bankPoll.handles = [
+      nativePlugin('App').addListener('appStateChange', ({ isActive }) => { if (isActive) trySync(); }),
+      nativePlugin('Browser').addListener('browserFinished', () => trySync())
+    ];
+  }
   // Connect bank stays clickable (it re-opens the consent tab); only the
   // re-sync / disconnect actions pause while we wait.
   bankButtons().forEach((b) => {
     b.classList.add('waiting');
     if (!['bankConnectBtn', 'resultsBankBtn'].includes(b.id)) b.disabled = true;
   });
-  setBankStatus('Waiting for you to finish the bank consent in the other tab…', { cancellable: true });
+  setBankStatus(`Waiting for you to finish the bank consent ${CONSENT_WHERE}…`, { cancellable: true });
 }
 
 async function connectBank() {
@@ -164,12 +231,16 @@ async function connectBank() {
   stopBankPoll();
   try {
     const out = await api('/api/bank/connect', { method: 'POST' });
-    const tab = window.open(out.consentUrl, '_blank');
-    if (!tab) {
-      toast('Your browser blocked the consent window — allow pop-ups for this site and try again.', 'err', 10000);
-      return;
+    if (NATIVE) {
+      await openExternal(out.consentUrl);
+    } else {
+      const tab = window.open(out.consentUrl, '_blank');
+      if (!tab) {
+        toast('Your browser blocked the consent window — allow pop-ups for this site and try again.', 'err', 10000);
+        return;
+      }
     }
-    toast('Complete the bank consent in the new tab — this page will update automatically.', 'ok', 8000);
+    toast(`Complete the bank consent ${CONSENT_WHERE} — this page will update automatically.`, 'ok', 8000);
     startBankPoll();
   } catch (err) {
     toast(err.message, 'err', 8000);
@@ -284,7 +355,13 @@ async function loadAnalysis() {
   for (const sub of data.subscriptions) list.appendChild(renderSub(sub));
 
   const upsell = $('#upsell');
-  if (data.lockedCount > 0) {
+  if (data.lockedCount > 0 && NATIVE) {
+    // Store rules: no purchase buttons or links to outside billing in the app.
+    upsell.hidden = false;
+    upsell.innerHTML = `
+      <h3>🔒 ${data.lockedCount} more subscription${data.lockedCount === 1 ? '' : 's'} found</h3>
+      <p>${PRO_NOTE}</p>`;
+  } else if (data.lockedCount > 0) {
     upsell.hidden = false;
     upsell.innerHTML = `
       <h3>🔒 ${data.lockedCount} more subscription${data.lockedCount === 1 ? '' : 's'} found</h3>
@@ -383,6 +460,7 @@ async function renderMonitorBar() {
 const stripeBilling = () => /^stripe/.test(config.billing || '');
 
 async function upgrade() {
+  if (NATIVE) return toast(PRO_NOTE, 'ok', 8000);
   try {
     const out = await api('/api/billing/upgrade', { method: 'POST' });
     if (out.checkoutUrl) {
@@ -472,6 +550,7 @@ $('#authForm').addEventListener('submit', async (e) => {
       body: JSON.stringify(body)
     });
     $('#authModal').hidden = true;
+    if (NATIVE && out.token) await saveAuthToken(out.token);
     config.loggedIn = true;
     config.email = out.user.email;
     config.pro = out.user.pro;
@@ -515,6 +594,7 @@ $('#accountBtn').addEventListener('click', async () => {
   if (!config.loggedIn) return openAuth('signup');
   if (confirm(`Logged in as ${config.email}. Log out?`)) {
     await api('/api/auth/logout', { method: 'POST' });
+    if (NATIVE) await saveAuthToken(null);
     location.reload();
   }
 });
@@ -529,7 +609,7 @@ function renderPills() {
     : '';
   $('#planPill').classList.toggle('good', Boolean(config.pro));
   $('#accountBtn').textContent = config.loggedIn ? `👤 ${config.email}` : '👤 Sign up / Log in';
-  if (config.pro && stripeBilling() && config.loggedIn) {
+  if (config.pro && stripeBilling() && config.loggedIn && !NATIVE) {
     $('#planPill').style.cursor = 'pointer';
     if (!config.proEndsAt) $('#planPill').title = 'Manage billing';
     $('#planPill').onclick = openPortal;
@@ -538,6 +618,7 @@ function renderPills() {
 
 // ---------- init ----------
 (async function init() {
+  if (NATIVE) await loadNativeSession();
   config = await api('/api/config');
   if (config.bankConnect === 'available') {
     $('#bankPill').textContent = '🏦 Bank connect ready';

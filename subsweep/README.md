@@ -102,6 +102,17 @@ registration threshold.
 The Free plan runs this fine for testing; move to Hobby before sending
 paid traffic.
 
+## Mobile apps (iOS and Android)
+
+`mobile/` wraps the same `/app` frontend in native shells with Capacitor,
+talking to the live server over the API (bearer tokens instead of cookies,
+CORS for the WebView origins). GitHub Actions (`.github/workflows/mobile.yml`)
+builds both apps on every push that touches `public/` or `mobile/`, signs
+them and uploads to TestFlight / Play internal testing once the store
+secrets exist. Setup, secrets and store-policy notes are in
+[`mobile/README.md`](mobile/README.md). The folder is excluded from the
+server image via `.dockerignore`.
+
 ## Run
 
 ```bash
