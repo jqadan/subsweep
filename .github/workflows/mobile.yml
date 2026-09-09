@@ -27,6 +27,10 @@ env:
   # versionCode and iOS CFBundleVersion. The marketing version comes from
   # subsweep/mobile/package.json.
   APP_BUILD_NUMBER: ${{ github.run_number }}
+  # Artifact names carry the attempt too: re-running a run (the way to pick up
+  # store secrets added after the fact) would otherwise collide with the
+  # artifact the first attempt already uploaded.
+  BUILD_TAG: ${{ github.run_number }}.${{ github.run_attempt }}
 
 defaults:
   run:
@@ -78,7 +82,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: android-${{ env.APP_VERSION }}-${{ github.run_number }}
+          name: android-${{ env.APP_VERSION }}-${{ env.BUILD_TAG }}
           if-no-files-found: error
           path: |
             subsweep/mobile/android/app/build/outputs/bundle/release/app-release.aab
@@ -168,6 +172,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: env.SIGNED == 'true'
         with:
-          name: ios-${{ env.APP_VERSION }}-${{ github.run_number }}
+          name: ios-${{ env.APP_VERSION }}-${{ env.BUILD_TAG }}
           if-no-files-found: error
           path: subsweep/mobile/ios/build/ipa/*.ipa
