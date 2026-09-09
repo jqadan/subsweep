@@ -1,18 +1,51 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#8b6cff"/><stop offset="1" stop-color="#5b3df5"/>
     </linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f7e6cd"/><stop offset="0.45" stop-color="#e7c79f"/><stop offset="1" stop-color="#c1935f"/>
+    </linearGradient>
+    <linearGradient id="straw" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe6ab"/><stop offset="1" stop-color="#eda325"/>
+    </linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#bcc5d4"/>
+    </linearGradient>
+    <clipPath id="headClip">
+      <path d="M225 292 h62 l30 108 q-61 15 -122 0 z"/>
+    </clipPath>
   </defs>
-  <rect width="512" height="512" rx="112" fill="url(#g)"/>
-  <!-- broom handle -->
-  <line x1="318" y1="118" x2="196" y2="300" stroke="#ffffff" stroke-width="30" stroke-linecap="round"/>
-  <!-- broom head -->
-  <path d="M164 292 L232 292 L250 320 L272 372 L146 372 L124 320 Z" fill="#ffffff" transform="rotate(-34 198 332)"/>
-  <!-- sweep motion arcs -->
-  <path d="M318 330 q40 24 40 70" fill="none" stroke="#ffffff" stroke-opacity="0.85" stroke-width="18" stroke-linecap="round"/>
-  <path d="M362 300 q64 34 64 104" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="18" stroke-linecap="round"/>
-  <!-- swept-away dollar dust -->
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <g transform="rotate(24 256 256) translate(256 256) scale(1.1) translate(-256 -256)">
+    <!-- handle -->
+    <rect x="241" y="92" width="30" height="184" rx="13" fill="url(#wood)"/>
+    <!-- ferrule where handle meets the head -->
+    <path d="M231 260 h50 a12 12 0 0 1 12 12 v22 h-74 v-22 a12 12 0 0 1 12 -12 z" fill="url(#metal)"/>
+    <!-- bristle head -->
+    <path d="M225 292 h62 l30 108 q-61 15 -122 0 z" fill="url(#straw)"/>
+    <g clip-path="url(#headClip)">
+      <!-- individual straws -->
+      <g stroke="#c07c12" stroke-opacity="0.42" stroke-width="6" stroke-linecap="round">
+        <line x1="234" y1="296" x2="205" y2="412"/>
+        <line x1="245" y1="296" x2="231" y2="412"/>
+        <line x1="256" y1="296" x2="256" y2="412"/>
+        <line x1="267" y1="296" x2="281" y2="412"/>
+        <line x1="278" y1="296" x2="307" y2="412"/>
+      </g>
+      <!-- stitched binding band -->
+      <rect x="180" y="316" width="152" height="22" fill="#d98a17"/>
+      <rect x="180" y="316" width="152" height="6" fill="#b9700c" opacity="0.55"/>
+    </g>
+  </g>
+
+  <!-- sweep motion -->
+  <path d="M322 330 q40 24 40 70" fill="none" stroke="#ffffff" stroke-opacity="0.85" stroke-width="18" stroke-linecap="round"/>
+  <path d="M366 300 q64 34 64 104" fill="none" stroke="#ffffff" stroke-opacity="0.62" stroke-width="18" stroke-linecap="round"/>
+
+  <!-- swept-away dust -->
   <circle cx="392" cy="176" r="12" fill="#ffd166"/>
   <circle cx="430" cy="226" r="8" fill="#ffd166" opacity="0.8"/>
   <circle cx="404" cy="132" r="7" fill="#ffd166" opacity="0.6"/>
