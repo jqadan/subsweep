@@ -120,7 +120,7 @@ npm run sync` (Android emulator) or your machine's LAN address (iOS).
 ## When Basiq production access arrives
 
 Nothing in this folder changes. `BASIQ_LIVE=true` on the server flips
-`/api/config` to `available`, the preview hint disappears, and the app's
+`/api/config` to `available`, the "coming soon" state disappears, and the app's
 Connect bank button starts the real consent flow in the system browser. The
 only edits are the landing-page wording in `../public/index.html`, which is
 not part of the app bundle.

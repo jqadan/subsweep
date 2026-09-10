@@ -125,7 +125,7 @@ npm start        # http://localhost:3100
 | --- | --- |
 | `PORT` | default 3100 |
 | `BASIQ_API_KEY` | enables bank connect (sandbox or production key) |
-| `BASIQ_LIVE` | `true` once Basiq has enabled the application for real institutions; otherwise the UI labels bank connect as a preview |
+| `BASIQ_LIVE` | `true` once Basiq has enabled the application for real institutions; until then the Connect bank button is disabled and reads "coming soon", since a sandbox key only reaches test banks |
 | `STRIPE_SECRET_KEY` | `sk_test_...` or `sk_live_...` enables Stripe subscription checkout (test mode is labelled in the UI) |
 | `STRIPE_PRICE_ID` | the recurring Price for SubSweep Pro |
 | `BASE_URL` | public URL for Stripe redirects |

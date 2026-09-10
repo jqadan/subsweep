@@ -624,9 +624,15 @@ function renderPills() {
     $('#bankPill').textContent = '🏦 Bank connect ready';
     $('#bankPill').classList.add('good');
   } else if (config.bankConnect === 'sandbox') {
-    $('#bankPill').textContent = '🏦 Bank connect: preview';
-    $('#bankPill').title = 'Bank connection currently reaches test banks only. Upload a CSV for your real accounts.';
-    $('#bankHint').textContent = 'Preview: bank connection currently reaches test banks only while our open-banking access is finalised. For your real accounts, upload a CSV statement.';
+    // A sandbox key only reaches Basiq's simulated banks, so the feature is
+    // not offered yet: the button is disabled and reads "coming soon" until
+    // BASIQ_LIVE=true, which needs Basiq's CDR onboarding to complete.
+    $('#bankPill').textContent = '🏦 Bank connect: coming soon';
+    $('#bankPill').title = 'Direct bank connection is being finalised. Upload a CSV statement for your real accounts.';
+    $('#bankConnectBtn').textContent = 'Connect bank — coming soon';
+    $('#resultsBankBtn').textContent = '🏦 Connect bank — coming soon';
+    bankButtons().forEach((b) => { b.disabled = true; });
+    $('#bankHint').textContent = 'Coming soon: we are completing open-banking (CDR) accreditation with our data provider. Until then, upload a CSV statement — it works with every Australian bank.';
   } else {
     $('#bankPill').textContent = '🏦 Bank connect: needs BASIQ_API_KEY';
     bankButtons().forEach((b) => { b.disabled = true; });
