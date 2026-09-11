@@ -16,6 +16,11 @@
 
 * { box-sizing: border-box; }
 
+/* The `hidden` attribute has to beat component display rules: the browser
+   default is a low-specificity `display: none`, so `.btn { display: inline-block }`
+   was overriding it and showing buttons meant to be hidden. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
