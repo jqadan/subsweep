@@ -124,7 +124,7 @@ const LEGAL = {
   EFFECTIVE: process.env.LEGAL_EFFECTIVE || '5 September 2026',
   YEAR: String(new Date().getFullYear())
 };
-for (const page of ['privacy', 'cdr-policy', 'terms']) {
+for (const page of ['privacy', 'cdr-policy', 'terms', 'delete-account']) {
   app.get(`/${page}`, (req, res) => {
     const html = fs.readFileSync(path.join(__dirname, 'public', 'legal', `${page}.html`), 'utf8')
       .replace(/{{(\w+)}}/g, (_, k) => LEGAL[k] ?? '');
@@ -261,6 +261,30 @@ app.post('/api/auth/logout', (req, res) => {
 app.get('/api/auth/me', (req, res) => {
   const ctx = getContext(req, res);
   res.json({ user: users.publicUser(ctx.user) });
+});
+
+// Account deletion, in the app and on the web. Google Play requires both for
+// any app that lets people create an account, and the public explainer lives
+// at /delete-account.
+app.post('/api/account/delete', async (req, res) => {
+  const ctx = getContext(req, res);
+  if (!ctx.user) return res.status(401).json({ error: 'Log in first' });
+  if (!users.verifyPassword(String(req.body?.password || ''), ctx.user.passwordHash)) {
+    return res.status(403).json({ error: 'That password is not correct.' });
+  }
+  // Revoke the bank consent first so it cannot outlive the account. A failure
+  // here must not strand the user with an account they asked us to delete.
+  if (ctx.user.basiqUserId && basiq.basiqEnabled()) {
+    try {
+      await basiq.deleteAllConnections(ctx.user.basiqUserId);
+    } catch (err) {
+      console.error('[delete] Basiq cleanup failed, deleting account anyway:', err.message);
+    }
+  }
+  users.deleteUser(ctx.user.id);
+  workspaces.delete(ctx.user.id);
+  res.setHeader('Set-Cookie', clearSessionCookie());
+  res.json({ ok: true });
 });
 
 // ---- Config ----

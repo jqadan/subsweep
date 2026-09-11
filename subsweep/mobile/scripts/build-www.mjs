@@ -33,9 +33,12 @@ const replace = (from, to) => {
 replace('content="width=device-width, initial-scale=1.0"', 'content="width=device-width, initial-scale=1.0, viewport-fit=cover"');
 // The brand block links to the marketing site on the web; in the app it is just a header.
 replace('<a class="brand" href="/" title="SubSweep home">', '<a class="brand">');
-for (const page of ['privacy', 'cdr-policy', 'terms']) {
+for (const page of ['privacy', 'cdr-policy', 'terms', 'delete-account']) {
   replace(`href="/${page}"`, `href="${api}/${page}" target="_blank" rel="noopener"`);
 }
+// The sample file is served by the site, not bundled: in the app the link
+// opens in the system browser, which is what downloads it.
+replace('href="/sample-statement.csv"', `href="${api}/sample-statement.csv"`);
 replace('<script src="app.js"></script>',
   `<script>window.SUBSWEEP_API = ${JSON.stringify(api)};</script>\n  <script src="app.js"></script>`);
 

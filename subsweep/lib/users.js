@@ -107,6 +107,13 @@ export function updateUser(id, patch) {
   return findById(id);
 }
 
+// Permanent: the row holds the account, its billing state and the derived
+// analysis, so removing it removes everything we hold about the person.
+// Raw transactions were never stored, so there is nothing else to clear.
+export function deleteUser(id) {
+  return db.prepare('DELETE FROM users WHERE id = ?').run(String(id)).changes > 0;
+}
+
 // Accounts imported from the pre-verification era were grandfathered in
 // during migration, so the flag is authoritative here.
 export function isVerified(user) {

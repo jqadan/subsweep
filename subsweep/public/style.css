@@ -12,6 +12,10 @@
   --amber-bg: #fdf3dd;
   --accent: #5b3df5;
   --accent-dark: #4a2fd1;
+  /* A touch darker than --border: the onboarding cards are the first thing
+     you see, and a hairline alone left them washed out on phone screens. */
+  --card-line: #d3d9ea;
+  --card-shadow: 0 1px 2px rgba(27, 34, 51, .05), 0 8px 20px -14px rgba(27, 34, 51, .35);
 }
 
 * { box-sizing: border-box; }
@@ -55,8 +59,9 @@ main { flex: 1; width: 100%; max-width: 860px; margin: 0 auto; padding: 24px 18p
 
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
 .card {
-  background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+  background: var(--panel); border: 1px solid var(--card-line); border-radius: 14px;
   padding: 18px; display: flex; flex-direction: column; gap: 8px;
+  box-shadow: var(--card-shadow);
 }
 .card h3 { margin: 0; font-size: 16px; }
 .card p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; flex: 1; }
@@ -173,6 +178,15 @@ main { flex: 1; width: 100%; max-width: 860px; margin: 0 auto; padding: 24px 18p
   width: 100%; margin-top: 4px; padding: 10px 12px; border-radius: 8px;
   border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 15px;
 }
+
+/* Destructive actions, kept visually separate from everything else. */
+.danger {
+  margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border);
+}
+.danger h4 { margin: 0 0 6px; font-size: 14px; color: var(--red); }
+.danger form { margin-top: 10px; }
+.btn.danger-btn { border-color: #eeb9b9; color: var(--red); }
+.btn.danger-btn:hover { background: var(--red); border-color: var(--red); color: white; }
 
 .toast {
   position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);

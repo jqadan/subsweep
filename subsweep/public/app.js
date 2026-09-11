@@ -8,13 +8,39 @@ let config = { billing: 'demo', bankConnect: 'not-configured', pro: false, freeT
 // workspace id instead of cookies, external pages open in the system browser,
 // and there is no purchase flow because the app stores require their own
 // billing for in-app subscriptions. Pro bought on the website still applies.
-const NATIVE = Boolean(window.Capacitor?.isNativePlatform?.());
-const API_BASE = NATIVE ? (window.SUBSWEEP_API || '') : '';
-const nativePlugin = (name) => window.Capacitor.Plugins?.[name] || window.Capacitor.registerPlugin(name);
+//
+// The build injects SUBSWEEP_API into the bundled app and nowhere else, so its
+// presence is what identifies the native shell. Do NOT gate this on
+// Capacitor's bridge: if that has not initialised by the time this script
+// runs, every request would be aimed at https://localhost, where nothing is
+// listening, and the whole app fails with "Failed to fetch".
+const API_BASE = (window.SUBSWEEP_API || '').replace(/\/+$/, '');
+const NATIVE = Boolean(API_BASE) || Boolean(window.Capacitor?.isNativePlatform?.());
 const CONSENT_WHERE = NATIVE ? 'in the browser' : 'in the other tab';
 const PRO_NOTE = 'This account is on the free plan. SubSweep Pro accounts see every subscription, plus refund-request emails and monthly monitoring.';
 let authToken = null;
 let workspaceId = null;
+
+// Capacitor plugins, each with a browser fallback so a missing or late bridge
+// degrades one feature instead of breaking startup.
+const plugin = (name) => window.Capacitor?.Plugins?.[name] || null;
+const store = {
+  async get(key) {
+    const p = plugin('Preferences');
+    if (p) return (await p.get({ key })).value ?? null;
+    try { return localStorage.getItem(key); } catch { return null; }
+  },
+  async set(key, value) {
+    const p = plugin('Preferences');
+    if (p) return p.set({ key, value });
+    try { localStorage.setItem(key, value); } catch { /* private mode */ }
+  },
+  async remove(key) {
+    const p = plugin('Preferences');
+    if (p) return p.remove({ key });
+    try { localStorage.removeItem(key); } catch { /* private mode */ }
+  }
+};
 
 function newWorkspaceId() {
   if (crypto.randomUUID) return crypto.randomUUID();
@@ -26,24 +52,31 @@ function newWorkspaceId() {
 }
 
 async function loadNativeSession() {
-  const prefs = nativePlugin('Preferences');
-  authToken = (await prefs.get({ key: 'authToken' })).value || null;
-  workspaceId = (await prefs.get({ key: 'workspaceId' })).value || null;
+  authToken = await store.get('authToken');
+  workspaceId = await store.get('workspaceId');
   if (!workspaceId) {
     workspaceId = newWorkspaceId();
-    await prefs.set({ key: 'workspaceId', value: workspaceId });
+    await store.set('workspaceId', workspaceId);
   }
 }
 
 async function saveAuthToken(token) {
   authToken = token || null;
-  const prefs = nativePlugin('Preferences');
-  if (token) await prefs.set({ key: 'authToken', value: token });
-  else await prefs.remove({ key: 'authToken' });
+  if (token) await store.set('authToken', token);
+  else await store.remove('authToken');
 }
 
 function openExternal(url) {
-  return nativePlugin('Browser').open({ url });
+  const browser = plugin('Browser');
+  if (browser) return browser.open({ url });
+  window.open(url, '_blank', 'noopener');
+  return Promise.resolve();
+}
+
+// Returns a listener handle, or null when the plugin isn't there.
+function nativeListen(name, event, handler) {
+  const p = plugin(name);
+  return p?.addListener ? p.addListener(event, handler) : null;
 }
 
 if (NATIVE) {
@@ -80,9 +113,8 @@ async function api(path, opts = {}) {
     // fetch only rejects for network-level failures — no connectivity, DNS,
     // TLS, or a cross-origin request the browser refused. Its own message
     // ("Failed to fetch") tells the user nothing, so say something useful.
-    throw new Error(NATIVE
-      ? `Can't reach ${API_BASE.replace(/^https?:\/\//, '')} — check your connection and try again.`
-      : 'Network error — check your connection and try again.');
+    const host = (API_BASE || location.origin).replace(/^https?:\/\//, '');
+    throw new Error(`Can't reach ${host} — check your connection and try again.`);
   }
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.error || `Request failed (${res.status})`);
@@ -221,9 +253,9 @@ function startBankPoll() {
   if (NATIVE) {
     // Coming back from the system browser does not always fire focus events.
     bankPoll.handles = [
-      nativePlugin('App').addListener('appStateChange', ({ isActive }) => { if (isActive) trySync(); }),
-      nativePlugin('Browser').addListener('browserFinished', () => trySync())
-    ];
+      nativeListen('App', 'appStateChange', ({ isActive }) => { if (isActive) trySync(); }),
+      nativeListen('Browser', 'browserFinished', () => trySync())
+    ].filter(Boolean);
   }
   // Connect bank stays clickable (it re-opens the consent tab); only the
   // re-sync / disconnect actions pause while we wait.
@@ -600,12 +632,44 @@ function renderVerifyBanner() {
     });
   } else if (el) el.hidden = true;
 }
-$('#accountBtn').addEventListener('click', async () => {
+$('#accountBtn').addEventListener('click', () => {
   if (!config.loggedIn) return openAuth('signup');
-  if (confirm(`Logged in as ${config.email}. Log out?`)) {
-    await api('/api/auth/logout', { method: 'POST' });
+  $('#accountEmail').textContent = `Logged in as ${config.email}`;
+  $('#deleteProNote').hidden = !config.pro;
+  $('#deletePassword').value = '';
+  $('#accountModal').hidden = false;
+});
+$('#accountClose').addEventListener('click', () => ($('#accountModal').hidden = true));
+$('#accountModal').addEventListener('click', (e) => {
+  if (e.target === $('#accountModal')) $('#accountModal').hidden = true;
+});
+
+$('#logoutBtn').addEventListener('click', async () => {
+  await api('/api/auth/logout', { method: 'POST' });
+  if (NATIVE) await saveAuthToken(null);
+  location.reload();
+});
+
+$('#deleteForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const ok = confirm('Permanently delete your SubSweep account?\n\n' +
+    'Your saved analysis, monitoring settings and any bank connection go with it. This cannot be undone.');
+  if (!ok) return;
+  const btn = $('#deleteForm button[type="submit"]');
+  btn.disabled = true;
+  try {
+    await api('/api/account/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: $('#deletePassword').value })
+    });
     if (NATIVE) await saveAuthToken(null);
+    alert('Your account has been deleted. Thanks for trying SubSweep.');
     location.reload();
+  } catch (err) {
+    toast(err.message, 'err', 8000);
+  } finally {
+    btn.disabled = false;
   }
 });
 
