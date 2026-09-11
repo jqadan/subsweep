@@ -304,10 +304,18 @@ app.get('/api/config', (req, res) => {
 });
 
 // ---- Data in ----
-app.post('/api/statement', upload.single('file'), (req, res) => {
+// Accepts the statement three ways: multipart (the website), a raw text body
+// (the native apps, whose WebView cannot reliably stream a picked file), or
+// JSON {csv}. The text limit matches multer's 5MB file limit.
+app.post('/api/statement',
+  express.text({ type: ['text/csv', 'text/plain'], limit: '5mb' }),
+  upload.single('file'),
+  (req, res) => {
   const ctx = getContext(req, res);
   try {
-    const text = req.file ? req.file.buffer.toString('utf8') : String(req.body?.csv || '');
+    const text = req.file ? req.file.buffer.toString('utf8')
+      : typeof req.body === 'string' ? req.body
+      : String(req.body?.csv || '');
     if (!text.trim()) return res.status(400).json({ error: 'No CSV content received' });
     const { transactions, warnings } = parseStatementCsv(text);
     if (!transactions.length) return res.status(400).json({ error: warnings.join(' ') });

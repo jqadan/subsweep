@@ -81,6 +81,11 @@ function nativeListen(name, event, handler) {
 
 if (NATIVE) {
   document.body.classList.add('native');
+  // Android builds the picker's filter from MIME types and ignores the .csv
+  // extension, and file providers label CSVs inconsistently. Without the
+  // variants listed the picker falls back to showing every file on the phone.
+  document.querySelector('#fileInput')?.setAttribute('accept',
+    '.csv,text/csv,text/comma-separated-values,application/csv,application/vnd.ms-excel,text/plain');
   document.addEventListener('click', (e) => {
     const link = e.target.closest?.('a[target="_blank"]');
     if (!link?.href) return;
@@ -122,13 +127,32 @@ async function api(path, opts = {}) {
 }
 
 // ---------- data sources ----------
+// On the web the file rides along as multipart, which is what a browser does
+// best. Android's WebView, though, hands back a content:// URI it cannot
+// always stream as a request body — the upload then dies inside the WebView
+// as a bare "Failed to fetch", with nothing reaching the server. There we
+// read the text first and post that instead; the endpoint accepts both.
+async function statementRequest(file) {
+  if (!NATIVE) {
+    const form = new FormData();
+    form.append('file', file);
+    return { method: 'POST', body: form };
+  }
+  let text;
+  try {
+    text = await file.text();
+  } catch {
+    throw new Error(`Couldn't read "${file.name}" from your device. Try saving it to your Downloads folder and choosing it again.`);
+  }
+  if (!text.trim()) throw new Error(`"${file.name}" looks empty.`);
+  return { method: 'POST', headers: { 'Content-Type': 'text/csv' }, body: text };
+}
+
 $('#fileInput').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const form = new FormData();
-  form.append('file', file);
   try {
-    const out = await api('/api/statement', { method: 'POST', body: form });
+    const out = await api('/api/statement', await statementRequest(file));
     toast(`Parsed ${out.transactionCount} transactions`);
     loadAnalysis();
   } catch (err) {
