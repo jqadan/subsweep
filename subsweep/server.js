@@ -96,9 +96,15 @@ app.use('/api', (req, res, next) => {
   const origin = req.headers.origin;
   if (origin && NATIVE_ORIGINS.has(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Vary', 'Origin');
+    res.setHeader('Vary', 'Origin, Access-Control-Request-Headers');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-SubSweep-Client, X-Workspace');
+    // Echo the headers the client asks for rather than listing our own.
+    // Android's WebView attaches X-Requested-With (the package name) to
+    // requests, and a fixed list silently fails the preflight for every call
+    // the app makes — which looks like "Failed to fetch" with no server log.
+    // The origin check above is what actually limits who gets a response.
+    const asked = req.headers['access-control-request-headers'];
+    res.setHeader('Access-Control-Allow-Headers', asked || 'Content-Type, Authorization, X-SubSweep-Client, X-Workspace');
     res.setHeader('Access-Control-Max-Age', '86400');
     if (req.method === 'OPTIONS') return res.sendStatus(204);
   }

@@ -73,7 +73,17 @@ async function api(path, opts = {}) {
     if (authToken) headers.Authorization = `Bearer ${authToken}`;
     opts = { ...opts, headers };
   }
-  const res = await fetch(API_BASE + path, opts);
+  let res;
+  try {
+    res = await fetch(API_BASE + path, opts);
+  } catch {
+    // fetch only rejects for network-level failures — no connectivity, DNS,
+    // TLS, or a cross-origin request the browser refused. Its own message
+    // ("Failed to fetch") tells the user nothing, so say something useful.
+    throw new Error(NATIVE
+      ? `Can't reach ${API_BASE.replace(/^https?:\/\//, '')} — check your connection and try again.`
+      : 'Network error — check your connection and try again.');
+  }
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.error || `Request failed (${res.status})`);
   return json;
@@ -618,8 +628,15 @@ function renderPills() {
 
 // ---------- init ----------
 (async function init() {
-  if (NATIVE) await loadNativeSession();
-  config = await api('/api/config');
+  try {
+    if (NATIVE) await loadNativeSession();
+    config = await api('/api/config');
+  } catch (err) {
+    // Without this the app just sat there with "…" in every pill and no
+    // explanation, and the first error the user saw was on their next action.
+    toast(err.message, 'err', 12000);
+    return;
+  }
   if (config.bankConnect === 'available') {
     $('#bankPill').textContent = '🏦 Bank connect ready';
     $('#bankPill').classList.add('good');
