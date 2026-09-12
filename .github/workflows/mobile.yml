@@ -170,7 +170,7 @@ jobs:
             echo "APPLE_TEAM_ID=$(trim "$APPLE_TEAM_ID_RAW")"
           } >> "$GITHUB_ENV"
 
-      - name: Archive, export the IPA and upload to TestFlight
+      - name: Archive and export a signed IPA
         if: env.SIGNED == 'true'
         working-directory: subsweep/mobile/ios
         # The three ids come from the step above, already trimmed. Re-declaring
@@ -196,14 +196,27 @@ jobs:
           EOF
           xcodebuild -exportArchive -archivePath build/App.xcarchive -exportOptionsPlist build/export.plist \
             -exportPath build/ipa "${AUTH[@]}" -quiet
-          # Same archive again, this time straight to App Store Connect (TestFlight).
-          sed -i '' 's#<string>export</string>#<string>upload</string>#' build/export.plist
-          xcodebuild -exportArchive -archivePath build/App.xcarchive -exportOptionsPlist build/export.plist \
-            -exportPath build/upload "${AUTH[@]}" -quiet
 
+      # Keep the IPA before attempting the upload. The upload needs an app
+      # record in App Store Connect, and when that is missing the build is
+      # perfectly good — it just has nowhere to go yet.
       - uses: actions/upload-artifact@v4
         if: env.SIGNED == 'true'
         with:
           name: ios-${{ env.APP_VERSION }}-${{ env.BUILD_TAG }}
           if-no-files-found: error
           path: subsweep/mobile/ios/build/ipa/*.ipa
+
+      - name: Upload to TestFlight
+        if: env.SIGNED == 'true'
+        working-directory: subsweep/mobile/ios
+        run: |
+          AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$ASC_KEY_PATH"
+                -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+          # Same archive, re-exported with destination=upload.
+          sed -i '' 's#<string>export</string>#<string>upload</string>#' build/export.plist
+          if ! xcodebuild -exportArchive -archivePath build/App.xcarchive \
+                 -exportOptionsPlist build/export.plist -exportPath build/upload "${AUTH[@]}"; then
+            echo "::error::TestFlight upload failed. \"Error Downloading App Information\" means no app record exists yet: create an app in App Store Connect with bundle ID au.com.subsweep.app, then re-run this job. The signed IPA from this run is attached as an artifact and can be uploaded with Transporter meanwhile."
+            exit 1
+          fi
