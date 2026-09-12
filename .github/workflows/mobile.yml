@@ -100,11 +100,20 @@ jobs:
 
   ios:
     name: iOS
-    runs-on: macos-15
+    # macos-26 for Xcode 26. App Store Connect rejects anything built with an
+    # older SDK ("All iOS apps must be built with the iOS 26 SDK or later"),
+    # and macos-15 ships Xcode 16 / the iOS 18 SDK.
+    runs-on: macos-26
     env:
       SIGNED: ${{ secrets.ASC_KEY_P8_BASE64 != '' }}
     steps:
       - uses: actions/checkout@v4
+
+      # Recorded so the next SDK-floor change is obvious from the log alone.
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i 'ios' || true
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -217,6 +226,6 @@ jobs:
           sed -i '' 's#<string>export</string>#<string>upload</string>#' build/export.plist
           if ! xcodebuild -exportArchive -archivePath build/App.xcarchive \
                  -exportOptionsPlist build/export.plist -exportPath build/upload "${AUTH[@]}"; then
-            echo "::error::TestFlight upload failed. \"Error Downloading App Information\" means no app record exists yet: create an app in App Store Connect with bundle ID au.com.subsweep.app, then re-run this job. The signed IPA from this run is attached as an artifact and can be uploaded with Transporter meanwhile."
+            echo "::error::TestFlight upload failed — the reason is in the log just above. Common ones: \"Error Downloading App Information\" means no app record exists for au.com.subsweep.app in App Store Connect; \"SDK version issue\" means Apple raised the required SDK and this job needs a newer macOS runner. The signed IPA is attached to this run either way and can be uploaded with Transporter."
             exit 1
           fi
