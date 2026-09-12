@@ -80,6 +80,12 @@ Create the key in App Store Connect → Users and Access → Integrations →
 App Store Connect API with the **Admin** role (cloud-managed signing needs
 it; Xcode then creates the distribution certificate and profile itself).
 
+`ios/App/App/PrivacyInfo.xcprivacy` declares the app's use of UserDefaults
+(reached through `@capacitor/preferences`, which ships no manifest of its
+own) and the two data types it collects. Without it App Store Connect
+rejects the upload with ITMS-91053. Keep it in step with the Play Data
+Safety answers — same questions, different shape.
+
 Version numbers: the marketing version is `version` in `package.json`
 (`1.0.0`); bump it for a new store release. The build number is the
 workflow run number, so every run is unique and increasing.
