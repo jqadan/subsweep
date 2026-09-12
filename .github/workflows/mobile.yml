@@ -130,19 +130,51 @@ jobs:
         if: env.SIGNED == 'true'
         env:
           ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_KEY_ID_RAW: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID_RAW: ${{ secrets.ASC_ISSUER_ID }}
+          APPLE_TEAM_ID_RAW: ${{ secrets.APPLE_TEAM_ID }}
         run: |
+          # Stray whitespace is easy to paste into a secret and impossible to
+          # see. Trim all three ids, and pass the trimmed values on, since
+          # xcodebuild needs the key file to be named AuthKey_<KEYID>.p8 exactly.
+          trim() { printf '%s' "$1" | tr -d '[:space:]'; }
+          KEY_ID="$(trim "$ASC_KEY_ID_RAW")"
           mkdir -p "$RUNNER_TEMP/keys"
-          echo "$ASC_KEY_P8_BASE64" | base64 -d > "$RUNNER_TEMP/keys/AuthKey_${ASC_KEY_ID}.p8"
-          echo "ASC_KEY_PATH=$RUNNER_TEMP/keys/AuthKey_${ASC_KEY_ID}.p8" >> "$GITHUB_ENV"
+          KEY="$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8"
+
+          # Accept the base64 of the .p8 (what the README asks for) or the
+          # file's own text pasted straight in, which is the easier mistake.
+          if printf '%s' "$ASC_KEY_P8_BASE64" | grep -q 'BEGIN PRIVATE KEY'; then
+            echo "Secret holds the key in PEM form; using it as-is."
+            printf '%s\n' "$ASC_KEY_P8_BASE64" > "$KEY"
+          else
+            printf '%s' "$ASC_KEY_P8_BASE64" | tr -d '[:space:]' | openssl base64 -d -A > "$KEY" 2>/dev/null || true
+          fi
+
+          # Fail here with something readable rather than inside xcodebuild,
+          # which only says "Invalid authentication key credential".
+          if ! openssl pkey -in "$KEY" -noout >/dev/null 2>&1; then
+            echo "::error::ASC_KEY_P8_BASE64 is not a usable App Store Connect key."
+            echo "Produced $(wc -c < "$KEY" | tr -d ' ') bytes, which OpenSSL cannot read as a private key."
+            echo "Expected either the base64 of AuthKey_XXXXXXXXXX.p8, or the contents of that file"
+            echo "starting with -----BEGIN PRIVATE KEY-----. Re-encode with:"
+            echo '  [Convert]::ToBase64String([IO.File]::ReadAllBytes("$HOME\Downloads\AuthKey_XXXXXXXXXX.p8"))'
+            exit 1
+          fi
+          echo "Key parsed successfully ($(wc -c < "$KEY" | tr -d ' ') bytes)."
+
+          {
+            echo "ASC_KEY_PATH=$KEY"
+            echo "ASC_KEY_ID=$KEY_ID"
+            echo "ASC_ISSUER_ID=$(trim "$ASC_ISSUER_ID_RAW")"
+            echo "APPLE_TEAM_ID=$(trim "$APPLE_TEAM_ID_RAW")"
+          } >> "$GITHUB_ENV"
 
       - name: Archive, export the IPA and upload to TestFlight
         if: env.SIGNED == 'true'
         working-directory: subsweep/mobile/ios
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        # The three ids come from the step above, already trimmed. Re-declaring
+        # them from secrets here would put the untrimmed values back.
         run: |
           AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$ASC_KEY_PATH"
                 -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
