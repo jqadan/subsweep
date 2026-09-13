@@ -3,8 +3,10 @@
 // coming soon). Capturing the website instead would show an Upgrade button
 // that does not exist in the apps, which both stores treat as misleading.
 //
-// Play wants 1080x1920 phone shots; Apple wants the 6.9" iPhone size,
-// 1320x2868, and scales every smaller device down from it.
+// Play wants 1080x1920 phone shots. App Store Connect has a slot per iPhone
+// display size and each one accepts only its own exact pixel sizes, so both
+// iPhone sets are captured: whichever slot the console shows, there is a file
+// that fits it.
 import fs from 'node:fs';
 import { chromium } from 'playwright-core';
 
@@ -14,8 +16,10 @@ const OUT = new URL('./screenshots', import.meta.url).pathname;
 const DEVICES = [
   // 360x640 at 3x -> 1080x1920
   { dir: '', width: 360, height: 640, scale: 3, label: 'Play phone 1080x1920' },
-  // iPhone 16 Pro Max is 440x956 points; at 3x that is Apple's required 1320x2868
-  { dir: 'ios', width: 440, height: 956, scale: 3, label: 'App Store 6.9in 1320x2868' }
+  // iPhone 16 Pro Max is 440x956 points; at 3x that is 1320x2868
+  { dir: 'ios-6.9', width: 440, height: 956, scale: 3, label: 'App Store 6.9in 1320x2868' },
+  // iPhone 14 Plus / 13 Pro Max is 428x926 points; at 3x that is 1284x2778
+  { dir: 'ios-6.5', width: 428, height: 926, scale: 3, label: 'App Store 6.5in 1284x2778' }
 ];
 
 const capacitorStub = () => {

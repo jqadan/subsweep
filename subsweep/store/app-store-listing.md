@@ -5,9 +5,9 @@ Copy the fenced blocks verbatim; they are already inside Apple's character
 limits (counted in brackets). The Play Console listing uses the same copy
 where the two stores overlap, so changing one means changing the other.
 
-Screenshots live in `screenshots/ios/` (1320×2868, the 6.9" iPhone size Apple
-requires). `screenshots/` holds the 1080×1920 Play versions of the same four
-screens.
+Screenshots live in `screenshots/ios-6.9/` and `screenshots/ios-6.5/` — one
+folder per App Store Connect upload slot (see §3). `screenshots/` holds the
+1080×1920 Play versions of the same four screens.
 
 ---
 
@@ -96,10 +96,22 @@ recurring,bank,statement,csv,spending,budget,cancel,refund,bills,expenses,money,
 
 ## 3. Screenshots
 
-Upload the four files in `screenshots/ios/` in order, as the **6.9" iPhone**
-set. Apple scales that set down for every smaller iPhone, so it is the only
-size needed. `TARGETED_DEVICE_FAMILY = 1` means the app is iPhone-only and
-App Store Connect will not ask for iPad screenshots.
+App Store Connect shows a separate upload slot per iPhone display size, and
+each slot accepts only its own exact pixel sizes — putting the wrong set in a
+slot fails with "The dimensions of one or more screenshots are wrong". There
+is a folder per slot:
+
+| Slot in App Store Connect | Folder | Accepted sizes |
+| --- | --- | --- |
+| iPhone 6.9" Display | `screenshots/ios-6.9/` | 1320×2868 (also 1290×2796) |
+| iPhone 6.5" Display | `screenshots/ios-6.5/` | 1284×2778 (also 1242×2688) |
+
+Filling the 6.9" slot is enough for submission — Apple scales it down for
+smaller iPhones — but the 6.5" set is there because the console still offers
+that slot, and a set uploaded into it beats a scaled one. `TARGETED_DEVICE_FAMILY = 1`
+means the app is iPhone-only, so no iPad screenshots are asked for.
+
+The four files go in numbered order in either slot:
 
 | File | Shows |
 | --- | --- |
