@@ -136,16 +136,33 @@ Mirror of `ios/App/App/PrivacyInfo.xcprivacy`; the two must agree.
 | --- | --- | --- | --- |
 | Email Address | Contact Info | App Functionality | No |
 | Other Financial Info | Financial Info | App Functionality | No |
+| User ID | Identifiers | App Functionality | No |
 
-Everything else is **No**: no name, no precise location, no contacts, no
-identifiers, no usage data, no diagnostics, no third-party analytics SDK in
-the bundle. "Other Financial Info" covers the derived subscription list saved
-for signed-in users — the raw transactions are analysed in memory and never
-stored, which is why they are not declared.
+Tick those three and nothing else. Each maps to a column that actually
+persists in the `users` table:
 
-Answer **No** to "Do you or your third-party partners collect data from this
-app?" only if nothing is collected; SubSweep does collect the two rows above,
-so answer Yes and declare them.
+- **Email Address** — the sign-up address.
+- **Other Financial Info** — `saved_analysis`, the derived subscription list.
+  The raw transactions are not declared: they live in an in-memory map for the
+  session and a restart clears them, so they are never stored.
+- **User ID** — the account id assigned at sign-up. The per-install workspace
+  id is deliberately *not* declared as a Device ID: it never reaches the
+  database either, and is only a key into that same in-memory map.
+
+Everything else is **No** — no name (sign-up is email and password only), no
+phone, no address, no health, no location, no contacts, no user content, no
+browsing or search history, no device id, no purchases (Pro is bought on the
+website, and the app only reads the resulting flag), no usage data, no
+diagnostics. There is no analytics or crash-reporting SDK in the bundle;
+Apple's own crash reports are Apple's collection, not yours.
+
+Answer **Yes** to "Do you or your third-party partners collect data from this
+app?" — the three rows above are collected — then declare them.
+
+Google Play's Data Safety form asks the same questions in a different shape,
+so it should carry the same three: Personal info → Email address and User IDs,
+Financial info → Other financial info. It is editable in the Play Console
+without a new release.
 
 ## 5. Age rating
 
