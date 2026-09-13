@@ -24,9 +24,18 @@ Set once for the app, not per version.
 | Primary language | English (Australia) |
 | Primary category | Finance |
 | Secondary category | Utilities |
-| Content rights | Does not contain, show or access third-party content — **No** |
+| Content rights | **Yes**, it contains third-party content and I have the necessary rights (see below) |
 | Age rating | 4+ (see §5) |
 | License agreement | Apple's standard EULA |
+
+**Content rights** is Yes because the app shows third-party brand names —
+`lib/merchants.js` names Netflix, Adobe, Spotify and the rest, the sample
+statement contains them, and "Cancel guide" opens each company's own
+cancellation page. That is referential use of a trademark to identify the
+service it belongs to, which is what the dialog means by "otherwise permitted
+to use it under the laws of each country". No licence is needed for it. What
+would need one is bundling their logos or artwork — the app ships none, and
+should not start: merchant rows render as text, never as a brand image.
 
 If the app record was created as plain `SubSweep`, renaming it to the longer
 name above is worth doing before the first submission: the name field carries
@@ -209,7 +218,7 @@ SubSweep analyses a statement the user supplies and reports what it finds. It is
 | Does your app use encryption? | Yes |
 | Qualifies for an exemption? | Yes — HTTPS only, standard OS encryption (exempt under 740.17(b)) |
 | Uses the Advertising Identifier (IDFA)? | No |
-| Third-party content? | No |
+| Third-party content? | Yes, with the necessary rights (§1) |
 | Contains ads? | No |
 
 `ITSAppUsesNonExemptEncryption` is already set to `false` in `Info.plist`, so
