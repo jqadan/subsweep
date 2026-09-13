@@ -27,6 +27,16 @@ Set once for the app, not per version.
 | Content rights | **Yes**, it contains third-party content and I have the necessary rights (see below) |
 | Age rating | 4+ (see §5) |
 | License agreement | Apple's standard EULA |
+| Digital Services Act | **This is a trader app** (see below) |
+
+**Digital Services Act** is trader: the app is published by an ABN-registered
+business and sells a paid tier, so it is commercial activity under EU law.
+Non-trader is for hobby apps with no business behind them. The cost of trader
+status is that Apple publishes the developer account's verified address, phone
+and email on EU App Store listings — so check what address the membership
+carries before EU distribution, since a sole trader's is often a home address.
+Nothing is published while availability is Australia-only (§6); declaring it
+now just means EU expansion later needs no revisiting.
 
 **Content rights** is Yes because the app shows third-party brand names —
 `lib/merchants.js` names Netflix, Adobe, Spotify and the rest, the sample
