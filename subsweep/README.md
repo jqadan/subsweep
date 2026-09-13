@@ -113,6 +113,21 @@ secrets exist. Setup, secrets and store-policy notes are in
 [`mobile/README.md`](mobile/README.md). The folder is excluded from the
 server image via `.dockerignore`.
 
+## Cancellation guides (`/cancel`)
+
+A page per merchant in `lib/merchants.js`, rendered by `lib/cancelGuides.js` —
+adding a merchant to the knowledge base adds a page, and `/sitemap.xml` picks
+it up automatically. They exist to be found by someone searching "how to
+cancel X in Australia" who has never heard of SubSweep.
+
+Deliberately, no page reproduces the merchant's click-by-click steps: we
+cannot verify them for thirty companies and stale steps are worse than none,
+because the reader believes they cancelled and keeps paying. Each page links
+to the merchant's own cancellation page for the steps, and spends its own
+words on what SubSweep actually knows — the statement descriptors the
+detector matches (derived from the same regexes), how to confirm the charge
+stopped, and the refund window. Keep it that way when adding merchants.
+
 ## Run
 
 ```bash

@@ -11,6 +11,8 @@ import * as basiq from './lib/basiq.js';
 import * as users from './lib/users.js';
 import { createSessionCookie, createSessionToken, clearSessionCookie, readSession, verifyToken } from './lib/sessions.js';
 import { diffAnalyses, runMonitoringTick, CYCLE_DAYS } from './lib/monitor.js';
+import { guidePage, guideIndex, guideKeys } from './lib/cancelGuides.js';
+import { MERCHANTS } from './lib/merchants.js';
 import { emailBackend } from './lib/email.js';
 import {
   sendVerificationEmail, sendResetEmail, sendProActivatedEmail, sendProEndedEmail,
@@ -131,6 +133,30 @@ for (const page of ['privacy', 'cdr-policy', 'terms', 'delete-account']) {
     res.type('html').send(html);
   });
 }
+
+// ---- Cancellation guides: one page per merchant in the knowledge base, so
+// adding a merchant adds a page. These exist to be found in a search for
+// "how to cancel X in Australia" by someone who does not know SubSweep yet.
+const GUIDE_KEYS = new Set(guideKeys());
+app.get('/cancel', (req, res) => res.type('html').send(guideIndex()));
+app.get('/cancel/:key', (req, res) => {
+  const merchant = GUIDE_KEYS.has(req.params.key) && MERCHANTS.find((m) => m.key === req.params.key);
+  if (!merchant) return res.status(404).redirect('/cancel');
+  res.type('html').send(guidePage(merchant));
+});
+
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send('User-agent: *\nAllow: /\nDisallow: /app\n\nSitemap: https://www.subsweep.com.au/sitemap.xml\n');
+});
+
+app.get('/sitemap.xml', (req, res) => {
+  const urls = ['/', '/cancel', '/privacy', '/cdr-policy', '/terms', ...guideKeys().map((k) => `/cancel/${k}`)];
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    urls.map((u) => `  <url><loc>https://www.subsweep.com.au${u}</loc></url>`).join('\n') +
+    `\n</urlset>\n`
+  );
+});
 
 // ---- Anonymous per-browser working state (transactions stay in memory only,
 // for logged-in and anonymous visitors alike) ----
