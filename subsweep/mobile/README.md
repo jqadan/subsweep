@@ -64,7 +64,8 @@ keytool -genkeypair -v -keystore subsweep-upload.jks -alias subsweep \
 base64 -w0 subsweep-upload.jks   # -> ANDROID_KEYSTORE_BASE64
 ```
 
-**iOS** (`macos-15`) needs an Apple Developer account. With the secrets
+**iOS** (`macos-26`, for the iOS 26 SDK App Store Connect now requires) needs
+an Apple Developer account. With the secrets
 below it archives, exports a signed `App.ipa` (attached to the run) and
 uploads the same archive to TestFlight. Without them it compiles for the
 simulator so build errors still surface.
@@ -107,8 +108,10 @@ workflow run number, so every run is unique and increasing.
    on the server, not sold or tracked) and the privacy policy URL. Builds
    uploaded by the workflow appear under TestFlight; pick one and submit it
    for review.
-3. Both stores want screenshots. iPhone only is configured
-   (`TARGETED_DEVICE_FAMILY = 1`), so iPad screenshots are not needed.
+3. Both stores want screenshots, and both sets are in `../store/screenshots/`
+   (see `../store/README.md` to regenerate them). `../store/app-store-listing.md`
+   holds every App Store Connect field — listing copy, App Privacy answers, age
+   rating and review notes — ready to paste.
 
 ## Local development
 
