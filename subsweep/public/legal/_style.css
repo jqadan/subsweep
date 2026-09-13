@@ -1,0 +1,20 @@
+:root { --ink: #141a33; --muted: #5a6280; --brand: #5b3df5; --bg: #f7f8fc; --panel: #fff; --line: #e6e8f0; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.65 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+.nav { display: flex; align-items: center; gap: 12px; padding: 16px 22px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.nav a.logo { display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; font-weight: 800; font-size: 18px; }
+.nav img { width: 32px; height: 32px; border-radius: 9px; }
+.nav .links { margin-left: auto; display: flex; gap: 18px; font-size: 14px; }
+.nav .links a { color: var(--muted); text-decoration: none; }
+main { max-width: 800px; margin: 0 auto; padding: 40px 22px 80px; }
+h1 { font-size: 34px; margin: 0 0 6px; letter-spacing: -0.5px; }
+.meta { color: var(--muted); font-size: 14px; margin-bottom: 30px; }
+h2 { font-size: 20px; margin: 34px 0 10px; }
+p, li { color: #2c3352; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; margin: 12px 0; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin: 16px 0; }
+a { color: var(--brand); }
+footer { color: var(--muted); font-size: 13px; text-align: center; padding: 20px; border-top: 1px solid var(--line); }
+footer a { color: var(--muted); margin: 0 6px; }

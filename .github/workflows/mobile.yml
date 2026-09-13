@@ -1,0 +1,231 @@
+name: Mobile apps
+
+# Builds the iOS and Android apps in subsweep/mobile on every push that touches
+# the web app or the native shells. Signed, store-ready builds and the
+# TestFlight / Google Play uploads switch on by themselves once the secrets
+# listed in subsweep/mobile/README.md exist. Until then the jobs still compile
+# everything and attach unsigned artifacts, so a broken build shows up here.
+
+on:
+  push:
+    branches: [claude/subsweep-app]
+    paths:
+      - 'subsweep/public/**'
+      - 'subsweep/mobile/**'
+      - '.github/workflows/mobile.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Build number: unique and increasing for every run, used as Android
+  # versionCode and iOS CFBundleVersion. The marketing version comes from
+  # subsweep/mobile/package.json.
+  APP_BUILD_NUMBER: ${{ github.run_number }}
+  # Artifact names carry the attempt too: re-running a run (the way to pick up
+  # store secrets added after the fact) would otherwise collide with the
+  # artifact the first attempt already uploaded.
+  BUILD_TAG: ${{ github.run_number }}.${{ github.run_attempt }}
+
+defaults:
+  run:
+    working-directory: subsweep/mobile
+
+jobs:
+  android:
+    name: Android
+    runs-on: ubuntu-latest
+    env:
+      # Secrets cannot be read in `if:` directly, so the switches live here.
+      SIGNED: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+      PLAY_UPLOAD: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: subsweep/mobile/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Install and sync the web bundle
+        run: |
+          npm ci
+          echo "APP_VERSION=$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
+          npm run build:www
+          npx cap sync android
+
+      - name: Restore the upload keystore
+        if: env.SIGNED == 'true'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+
+      - name: Build release bundle and debug APK
+        working-directory: subsweep/mobile/android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon bundleRelease assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-${{ env.APP_VERSION }}-${{ env.BUILD_TAG }}
+          if-no-files-found: error
+          path: |
+            subsweep/mobile/android/app/build/outputs/bundle/release/app-release.aab
+            subsweep/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload to Google Play (internal testing track)
+        if: env.PLAY_UPLOAD == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: au.com.subsweep.app
+          releaseFiles: subsweep/mobile/android/app/build/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed
+
+  ios:
+    name: iOS
+    # macos-26 for Xcode 26. App Store Connect rejects anything built with an
+    # older SDK ("All iOS apps must be built with the iOS 26 SDK or later"),
+    # and macos-15 ships Xcode 16 / the iOS 18 SDK.
+    runs-on: macos-26
+    env:
+      SIGNED: ${{ secrets.ASC_KEY_P8_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Recorded so the next SDK-floor change is obvious from the log alone.
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i 'ios' || true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: subsweep/mobile/package-lock.json
+
+      - name: Install and sync the web bundle
+        run: |
+          npm ci
+          echo "APP_VERSION=$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
+          npm run build:www
+          npx cap sync ios
+
+      - name: Build for the simulator (no signing configured)
+        if: env.SIGNED != 'true'
+        working-directory: subsweep/mobile/ios
+        run: |
+          xcodebuild build -workspace App/App.xcworkspace -scheme App -configuration Release \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO -quiet
+
+      - name: Restore the App Store Connect API key
+        if: env.SIGNED == 'true'
+        env:
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          ASC_KEY_ID_RAW: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID_RAW: ${{ secrets.ASC_ISSUER_ID }}
+          APPLE_TEAM_ID_RAW: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # Stray whitespace is easy to paste into a secret and impossible to
+          # see. Trim all three ids, and pass the trimmed values on, since
+          # xcodebuild needs the key file to be named AuthKey_<KEYID>.p8 exactly.
+          trim() { printf '%s' "$1" | tr -d '[:space:]'; }
+          KEY_ID="$(trim "$ASC_KEY_ID_RAW")"
+          mkdir -p "$RUNNER_TEMP/keys"
+          KEY="$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8"
+
+          # Accept the base64 of the .p8 (what the README asks for) or the
+          # file's own text pasted straight in, which is the easier mistake.
+          if printf '%s' "$ASC_KEY_P8_BASE64" | grep -q 'BEGIN PRIVATE KEY'; then
+            echo "Secret holds the key in PEM form; using it as-is."
+            printf '%s\n' "$ASC_KEY_P8_BASE64" > "$KEY"
+          else
+            printf '%s' "$ASC_KEY_P8_BASE64" | tr -d '[:space:]' | openssl base64 -d -A > "$KEY" 2>/dev/null || true
+          fi
+
+          # Fail here with something readable rather than inside xcodebuild,
+          # which only says "Invalid authentication key credential".
+          if ! openssl pkey -in "$KEY" -noout >/dev/null 2>&1; then
+            echo "::error::ASC_KEY_P8_BASE64 is not a usable App Store Connect key."
+            echo "Produced $(wc -c < "$KEY" | tr -d ' ') bytes, which OpenSSL cannot read as a private key."
+            echo "Expected either the base64 of AuthKey_XXXXXXXXXX.p8, or the contents of that file"
+            echo "starting with -----BEGIN PRIVATE KEY-----. Re-encode with:"
+            echo '  [Convert]::ToBase64String([IO.File]::ReadAllBytes("$HOME\Downloads\AuthKey_XXXXXXXXXX.p8"))'
+            exit 1
+          fi
+          echo "Key parsed successfully ($(wc -c < "$KEY" | tr -d ' ') bytes)."
+
+          {
+            echo "ASC_KEY_PATH=$KEY"
+            echo "ASC_KEY_ID=$KEY_ID"
+            echo "ASC_ISSUER_ID=$(trim "$ASC_ISSUER_ID_RAW")"
+            echo "APPLE_TEAM_ID=$(trim "$APPLE_TEAM_ID_RAW")"
+          } >> "$GITHUB_ENV"
+
+      - name: Archive and export a signed IPA
+        if: env.SIGNED == 'true'
+        working-directory: subsweep/mobile/ios
+        # The three ids come from the step above, already trimmed. Re-declaring
+        # them from secrets here would put the untrimmed values back.
+        run: |
+          AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$ASC_KEY_PATH"
+                -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+          xcodebuild archive -workspace App/App.xcworkspace -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath build/App.xcarchive \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            MARKETING_VERSION="$APP_VERSION" CURRENT_PROJECT_VERSION="$APP_BUILD_NUMBER" \
+            "${AUTH[@]}" -quiet
+          cat > build/export.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>export</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive -archivePath build/App.xcarchive -exportOptionsPlist build/export.plist \
+            -exportPath build/ipa "${AUTH[@]}" -quiet
+
+      # Keep the IPA before attempting the upload. The upload needs an app
+      # record in App Store Connect, and when that is missing the build is
+      # perfectly good — it just has nowhere to go yet.
+      - uses: actions/upload-artifact@v4
+        if: env.SIGNED == 'true'
+        with:
+          name: ios-${{ env.APP_VERSION }}-${{ env.BUILD_TAG }}
+          if-no-files-found: error
+          path: subsweep/mobile/ios/build/ipa/*.ipa
+
+      - name: Upload to TestFlight
+        if: env.SIGNED == 'true'
+        working-directory: subsweep/mobile/ios
+        run: |
+          AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$ASC_KEY_PATH"
+                -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+          # Same archive, re-exported with destination=upload.
+          sed -i '' 's#<string>export</string>#<string>upload</string>#' build/export.plist
+          if ! xcodebuild -exportArchive -archivePath build/App.xcarchive \
+                 -exportOptionsPlist build/export.plist -exportPath build/upload "${AUTH[@]}"; then
+            echo "::error::TestFlight upload failed — the reason is in the log just above. Common ones: \"Error Downloading App Information\" means no app record exists for au.com.subsweep.app in App Store Connect; \"SDK version issue\" means Apple raised the required SDK and this job needs a newer macOS runner. The signed IPA is attached to this run either way and can be uploaded with Transporter."
+            exit 1
+          fi
