@@ -1,0 +1,30 @@
+{
+  "name": "subsweep-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Native iOS and Android shells for SubSweep (Capacitor), bundling the web app from ../public and talking to the live API",
+  "type": "module",
+  "scripts": {
+    "build:www": "node scripts/build-www.mjs",
+    "assets": "node scripts/make-assets.mjs && capacitor-assets generate --android --ios --iconBackgroundColor '#5b3df5' --iconBackgroundColorDark '#5b3df5' --splashBackgroundColor '#f6f7fb' --splashBackgroundColorDark '#1b2233'",
+    "sync": "npm run build:www && cap sync",
+    "android": "npm run sync && cap open android",
+    "ios": "npm run sync && cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.6.9",
+    "@capacitor/app": "^7.1.2",
+    "@capacitor/browser": "^7.0.5",
+    "@capacitor/cli": "^7.6.9",
+    "@capacitor/core": "^7.6.9",
+    "@capacitor/ios": "^7.6.9",
+    "@capacitor/preferences": "^7.0.4"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "sharp": "^0.35.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
