@@ -18,6 +18,28 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- "Share to SubSweep" for a CSV from the bank app, Files, Gmail…
+                 Only CSV types, deliberately: adding text/plain would put
+                 SubSweep in the share sheet for every link and snippet. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/csv" />
+                <data android:mimeType="text/comma-separated-values" />
+                <data android:mimeType="application/csv" />
+                <data android:mimeType="application/vnd.ms-excel" />
+            </intent-filter>
+            <!-- "Open with SubSweep" for a downloaded CSV. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="text/csv" />
+                <data android:mimeType="text/comma-separated-values" />
+                <data android:mimeType="application/csv" />
+                <data android:mimeType="application/vnd.ms-excel" />
+            </intent-filter>
         </activity>
 
         <provider

@@ -36,6 +36,27 @@ Inside the app the web code detects the native runtime and:
   usual shortcut) and have the server treat those receipts like Stripe
   webhooks.
 
+## Sharing a statement into the app
+
+Both apps appear in the system share sheet and "Open with" for CSV files, so
+a statement can go straight from the bank app, Files, Gmail or Mail into
+SubSweep without the export-find-pick dance. The native side reads the file
+into memory the moment it arrives and parks the text; the web code collects it
+with the `ShareIntake` plugin's `consume()` — at start-up for a cold launch,
+or on the `subsweepShare` window event when the app was already open — and
+posts it to `/api/statement` as `text/csv`, the same path the picker uses.
+
+| Platform | Declared in | Received by |
+| --- | --- | --- |
+| Android | `AndroidManifest.xml` — `SEND` and `VIEW` filters for the CSV MIME types | `MainActivity.java` reads the `content://` stream while the sender's grant is valid; `ShareIntake.java` hands it over |
+| iOS | `Info.plist` — `CFBundleDocumentTypes` for `public.comma-separated-values-text` | `AppDelegate.swift` passes the file URL to `ShareIntake.swift`, which reads it and deletes iOS's `Documents/Inbox` copy so nothing stays on disk |
+
+CSV types only, deliberately: declaring plain text would put SubSweep in the
+share sheet for every link and snippet on the phone. The iOS plugin lives in
+the app target, so `Main.storyboard` points at `BridgeViewController` (in
+`ShareIntake.swift`), which registers it once the bridge exists — Capacitor
+only auto-registers plugins that arrive as packages.
+
 ## CI builds
 
 The workflow runs two jobs. Both always compile; signing and uploads switch

@@ -167,6 +167,38 @@ $('#sampleBtn').addEventListener('click', async () => {
   loadAnalysis();
 });
 
+// ---------- shared files (native only) ----------
+// "Share to SubSweep" from the bank app, Files or Mail. The native side reads
+// the file into memory the moment it arrives and parks the text; we collect
+// it here — at start-up for a cold launch, and on the subsweepShare window
+// event when the app was already running. Returns true when a file was
+// handled, so init can skip its default load.
+async function consumeSharedFile() {
+  const cap = window.Capacitor;
+  if (!cap?.isPluginAvailable?.('ShareIntake')) return false;
+  let shared;
+  try {
+    shared = await cap.registerPlugin('ShareIntake').consume();
+  } catch {
+    return false;
+  }
+  if (shared.error) { toast(shared.error, 'err', 10000); return true; }
+  if (!shared.text) return false;
+  const name = shared.name || 'statement.csv';
+  try {
+    if (!shared.text.trim()) throw new Error(`"${name}" looks empty.`);
+    const out = await api('/api/statement', {
+      method: 'POST', headers: { 'Content-Type': 'text/csv' }, body: shared.text
+    });
+    toast(`Parsed ${out.transactionCount} transactions from ${name}`);
+    loadAnalysis();
+  } catch (err) {
+    toast(err.message, 'err', 10000);
+  }
+  return true;
+}
+if (NATIVE) window.addEventListener('subsweepShare', consumeSharedFile);
+
 // ---------- bank connect ----------
 // Basiq consent happens in a separate tab, so we poll /api/bank/sync until a
 // connection with transactions shows up (or the user gives up), and also retry
@@ -747,6 +779,9 @@ function renderPills() {
   renderVerifyBanner();
   refreshBankStatus();
   await handleStripeReturn();
+  // A statement shared into the app takes precedence over whatever the
+  // workspace held before.
+  if (NATIVE && await consumeSharedFile()) return;
   if (sessionStorage.getItem('demo')) {
     sessionStorage.removeItem('demo');
     await api('/api/sample', { method: 'POST' });
