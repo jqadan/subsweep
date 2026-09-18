@@ -214,7 +214,7 @@ No account is needed to review the app. On the first screen, tap "Try with sampl
 
 Accounts are optional and only save the result list and enable a monthly reminder email. Sign-up is email and password, and email verification is not required to use the app. Accounts can be deleted from inside the app (tap the email address in the header, then "Delete my account") and deletion is immediate and permanent.
 
-There are no in-app purchases and no purchase or billing UI anywhere in the app. SubSweep Pro is a multi-platform service subscription bought on the website; per guideline 3.1.3(b), the app lets an existing Pro account use what it already paid for, and contains no link, button or call to action to buy it.
+There are no in-app purchases and no purchase or billing UI anywhere in the app. SubSweep is a paid web-based tool (www.subsweep.com.au) and this app is its free stand-alone companion under guideline 3.1.3(f): an existing Pro account uses what it already paid for on the web, and the app contains no purchasing, no price, and no link, button or call to action to buy outside the app. Locked features show an informational status line only.
 
 Bank connection over open banking (Consumer Data Right) is shown as "coming soon" and is disabled — our accreditation with the data provider is still in progress — so CSV upload is the only way in for this version.
 
