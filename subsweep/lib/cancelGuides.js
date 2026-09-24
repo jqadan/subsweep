@@ -39,7 +39,7 @@ export function descriptors(re) {
   )];
 }
 
-const LAYOUT = (title, description, path, body) => `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="icon" type="image/svg+xml" href="/brand/icon.svg" /><link rel="stylesheet" href="/legal/_style.css" /><title>${esc(title)}</title>
+export const pageLayout = (title, description, path, body) => `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="icon" type="image/svg+xml" href="/brand/icon.svg" /><link rel="stylesheet" href="/legal/_style.css" /><title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}" />
 <link rel="canonical" href="https://www.subsweep.com.au${path}" />
 <meta property="og:title" content="${esc(title)}" /><meta property="og:description" content="${esc(description)}" /><meta property="og:type" content="article" /><meta property="og:url" content="https://www.subsweep.com.au${path}" />
@@ -74,7 +74,7 @@ export function guidePage(m) {
 <p>There is no single cancellation page for gym memberships — each chain and often each franchise location handles it differently, and many are contracts with a notice period rather than subscriptions you can switch off. Check your membership agreement for how much notice is required and whether cancellation has to be in writing, then contact your home club directly.</p>
 <p>Cancelling the direct debit at your bank does not end the contract on its own. It stops the payments and usually leaves the debt in place.</p>`;
 
-  return LAYOUT(title, description, `/cancel/${m.key}`, `
+  return pageLayout(title, description, `/cancel/${m.key}`, `
 <h1>How to cancel ${esc(m.name)} in Australia</h1>
 <p class="meta">${esc(m.category)} · Updated ${new Date().toLocaleDateString('en-AU', { month: 'long', year: 'numeric' })}</p>
 
@@ -121,7 +121,7 @@ export function guideIndex() {
 <ul>${list.map((m) => `<li><a href="/cancel/${esc(m.key)}">How to cancel ${esc(m.name)}</a></li>`).join('')}</ul>`)
     .join('\n');
 
-  return LAYOUT(
+  return pageLayout(
     'How to cancel any subscription in Australia — SubSweep',
     `Cancellation guides for ${MERCHANTS.length} subscriptions Australians pay for, plus how to check on your bank statement that the charge actually stopped.`,
     '/cancel',

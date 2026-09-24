@@ -10,7 +10,7 @@
 import fs from 'node:fs';
 import { chromium } from 'playwright-core';
 
-const BASE = 'http://localhost:3190';
+const BASE = process.env.BASE || "http://localhost:3190";
 const OUT = new URL('./screenshots', import.meta.url).pathname;
 
 const DEVICES = [

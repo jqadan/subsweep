@@ -12,6 +12,7 @@ import * as users from './lib/users.js';
 import { createSessionCookie, createSessionToken, clearSessionCookie, readSession, verifyToken } from './lib/sessions.js';
 import { diffAnalyses, runMonitoringTick, CYCLE_DAYS } from './lib/monitor.js';
 import { guidePage, guideIndex, guideKeys } from './lib/cancelGuides.js';
+import { comparePage, COMPARE_PAGES } from './lib/comparePages.js';
 import { MERCHANTS } from './lib/merchants.js';
 import { emailBackend } from './lib/email.js';
 import {
@@ -20,7 +21,7 @@ import {
 } from './lib/accountEmails.js';
 import {
   stripeEnabled, stripeMode, ensureCustomer,
-  createSubscriptionCheckout, createPortalSession, verifyWebhookSignature
+  createSubscriptionCheckout, createPortalSession, verifyWebhookSignature, cancelAllSubscriptions
 } from './lib/stripe.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -145,12 +146,20 @@ app.get('/cancel/:key', (req, res) => {
   res.type('html').send(guidePage(merchant));
 });
 
+app.get('/compare/:slug', (req, res) => {
+  const html = comparePage(req.params.slug);
+  if (!html) return res.redirect('/');
+  res.type('html').send(html);
+});
+
 app.get('/robots.txt', (req, res) => {
   res.type('text/plain').send('User-agent: *\nAllow: /\nDisallow: /app\n\nSitemap: https://www.subsweep.com.au/sitemap.xml\n');
 });
 
 app.get('/sitemap.xml', (req, res) => {
-  const urls = ['/', '/cancel', '/privacy', '/cdr-policy', '/terms', ...guideKeys().map((k) => `/cancel/${k}`)];
+  const urls = ['/', '/cancel', '/privacy', '/cdr-policy', '/terms',
+    ...Object.keys(COMPARE_PAGES).map((s) => `/compare/${s}`),
+    ...guideKeys().map((k) => `/cancel/${k}`)];
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
     urls.map((u) => `  <url><loc>https://www.subsweep.com.au${u}</loc></url>`).join('\n') +
@@ -183,6 +192,21 @@ function getContext(req, res) {
 
 function isPro(ctx) {
   return ctx.user ? ctx.user.pro : ctx.ws.demoPro;
+}
+
+// Apple (3.1.1) and Google both require in-app purchase for anything an app
+// unlocks, and Pro is sold only on the website. So the apps give every
+// account the free view — top three, no refund emails — and say nothing
+// about Pro. Pro still applies on the web and by email. The full analysis is
+// still what gets saved, so opening the app never truncates the web view.
+function forClient(req, analysis) {
+  if (!isNativeClient(req) || !analysis?.subscriptions) return analysis;
+  return {
+    ...analysis,
+    pro: false,
+    lockedCount: 0,
+    subscriptions: analysis.subscriptions.slice(0, FREE_TIER_LIMIT).map((s) => ({ ...s, refundEmail: null }))
+  };
 }
 
 function buildAnalysis(ctx) {
@@ -298,6 +322,19 @@ app.post('/api/account/delete', async (req, res) => {
   if (!users.verifyPassword(String(req.body?.password || ''), ctx.user.passwordHash)) {
     return res.status(403).json({ error: 'That password is not correct.' });
   }
+  // A Pro subscription is billed by Stripe, not by the account row, so it has
+  // to be cancelled here or it keeps charging after the account is gone. The
+  // apps cannot warn about Pro (store rules), so this cannot rely on the user
+  // cancelling first. If Stripe fails, stop before touching anything else:
+  // deleting the account would leave someone paying with no way to stop it.
+  if (ctx.user.stripeCustomerId && stripeEnabled()) {
+    try {
+      await cancelAllSubscriptions(ctx.user.stripeCustomerId);
+    } catch (err) {
+      console.error('[delete] Stripe cancellation failed, account kept:', err.message);
+      return res.status(502).json({ error: 'Something went wrong closing your account, so nothing has been deleted. Please try again in a few minutes.' });
+    }
+  }
   // Revoke the bank consent first so it cannot outlive the account. A failure
   // here must not strand the user with an account they asked us to delete.
   if (ctx.user.basiqUserId && basiq.basiqEnabled()) {
@@ -320,8 +357,8 @@ app.get('/api/config', (req, res) => {
     // 'available' = production Basiq key, 'sandbox' = Basiq test banks only.
     bankConnect: basiq.basiqEnabled() ? (basiq.basiqLive() ? 'available' : 'sandbox') : 'not-configured',
     billing: stripeEnabled() ? (stripeMode() === 'live' ? 'stripe' : 'stripe-test') : 'demo',
-    pro: isPro(ctx),
-    proEndsAt: ctx.user?.proEndsAt || null,
+    pro: isNativeClient(req) ? false : isPro(ctx),
+    proEndsAt: isNativeClient(req) ? null : ctx.user?.proEndsAt || null,
     loggedIn: Boolean(ctx.user),
     email: ctx.user?.email || null,
     verified: ctx.user ? users.isVerified(ctx.user) : null,
@@ -368,7 +405,7 @@ app.get('/api/analysis', (req, res) => {
     if (ctx.user?.savedAnalysis) {
       const saved = ctx.user.savedAnalysis;
       const scanAgeDays = saved.savedAt ? Math.floor((Date.now() - new Date(saved.savedAt).getTime()) / 86400000) : null;
-      return res.json({ ...saved, restored: true, scanAgeDays, rescanDue: scanAgeDays !== null && scanAgeDays >= CYCLE_DAYS });
+      return res.json(forClient(req, { ...saved, restored: true, scanAgeDays, rescanDue: scanAgeDays !== null && scanAgeDays >= CYCLE_DAYS }));
     }
     return res.json({ empty: true });
   }
@@ -383,7 +420,7 @@ app.get('/api/analysis', (req, res) => {
       monitoring: { ...ctx.user.monitoring, lastScanAt: analysis.savedAt }
     });
   }
-  res.json(analysis);
+  res.json(forClient(req, analysis));
 });
 
 // ---- Monitoring ----

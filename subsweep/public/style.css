@@ -156,6 +156,9 @@ main { flex: 1; width: 100%; max-width: 860px; margin: 0 auto; padding: 24px 18p
 }
 .upsell h3 { margin: 0 0 6px; }
 .upsell p { color: var(--muted); font-size: 14px; margin: 0 0 14px; }
+/* In the apps the box only states what the list is — no promo styling. */
+.upsell.plain { border: none; background: none; box-shadow: none; padding: 4px 0; text-align: center; }
+.upsell.plain p { margin: 0; }
 
 .btnpill { cursor: pointer; font-family: inherit; }
 .btnpill:hover { border-color: var(--accent); color: var(--accent); }

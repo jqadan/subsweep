@@ -61,7 +61,7 @@ place for anything time-sensitive. [151/170]
 Bank connect is coming soon. Until then, upload a CSV from any Australian bank and SubSweep finds every recurring charge, price rise and refund window.
 ```
 
-**Description** [1774/4000]
+**Description** [1623/4000]
 
 ```
 SubSweep finds the subscriptions you forgot you're paying for.
@@ -83,8 +83,6 @@ Your statement is analysed in memory for your session and never written to disk.
 NO ACCOUNT NEEDED
 
 Load the sample statement to see exactly how it works, or upload your own straight away — neither needs an account. Create one only if you want your list saved between visits and a monthly reminder to check again.
-
-Free accounts see the top three subscriptions found. SubSweep Pro accounts see every subscription, plus refund-request emails and monthly monitoring.
 
 MADE IN AUSTRALIA
 
@@ -137,7 +135,7 @@ The four files go in numbered order in either slot:
 | `01-start.png` | Upload, bank connect (coming soon) and sample-data cards |
 | `02-results.png` | The yearly total, refund-window and price-hike counts |
 | `03-subscriptions.png` | The subscription list with its badges and cancel links |
-| `04-more.png` | What a Pro account adds, and the privacy statement |
+| `04-more.png` | The rest of the list and the privacy statement |
 
 They are captured from the real app with the Capacitor runtime stubbed in, so
 they show what the shipped build shows — no purchase button, bank connect as
@@ -214,7 +212,7 @@ No account is needed to review the app. On the first screen, tap "Try with sampl
 
 Accounts are optional and only save the result list and enable a monthly reminder email. Sign-up is email and password, and email verification is not required to use the app. Accounts can be deleted from inside the app (tap the email address in the header, then "Delete my account") and deletion is immediate and permanent.
 
-There are no in-app purchases and no purchase or billing UI anywhere in the app. SubSweep is a paid web-based tool (www.subsweep.com.au) and this app is its free stand-alone companion under guideline 3.1.3(f): an existing Pro account uses what it already paid for on the web, and the app contains no purchasing, no price, and no link, button or call to action to buy outside the app. Locked features show an informational status line only.
+In response to the previous 3.1.1 rejection: the app no longer unlocks anything based on a purchase made elsewhere. Every account — including one that has a paid plan on our website — gets the same free experience in the app, enforced on our server for all requests from the app. The app contains no paid features, no locked content, no mention of a paid plan, no prices, and no purchase links or calls to action. There are no in-app purchases because nothing in the app is for sale.
 
 Bank connection over open banking (Consumer Data Right) is shown as "coming soon" and is disabled — our accreditation with the data provider is still in progress — so CSV upload is the only way in for this version.
 

@@ -61,6 +61,19 @@ export async function createSubscriptionCheckout({ customerId, userId, baseUrl }
   });
 }
 
+// Cancels every live subscription on the customer, immediately. Used when an
+// account is deleted: billing must not outlive the account.
+export async function cancelAllSubscriptions(customerId) {
+  const list = await stripeRequest('GET', `/subscriptions?customer=${encodeURIComponent(customerId)}&status=all&limit=100`);
+  let cancelled = 0;
+  for (const sub of list.data || []) {
+    if (['canceled', 'incomplete_expired'].includes(sub.status)) continue;
+    await stripeRequest('DELETE', `/subscriptions/${sub.id}`);
+    cancelled++;
+  }
+  return cancelled;
+}
+
 export async function createPortalSession({ customerId, baseUrl }) {
   return stripeRequest('POST', '/billing_portal/sessions', {
     customer: customerId,

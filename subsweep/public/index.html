@@ -12,6 +12,41 @@
   <link rel="apple-touch-icon" href="/brand/icon-180.png" />
   <meta property="og:image" content="https://www.subsweep.com.au/brand/social.png" />
   <meta name="twitter:card" content="summary_large_image" />
+  <link rel="canonical" href="https://www.subsweep.com.au/" />
+  <meta property="og:url" content="https://www.subsweep.com.au/" />
+  <meta property="og:type" content="website" />
+  <!-- Structured data: tells search engines what this is and what it costs.
+       Keep the prices in step with the pricing section below. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://www.subsweep.com.au/#org",
+        "name": "SubSweep",
+        "url": "https://www.subsweep.com.au/",
+        "logo": "https://www.subsweep.com.au/brand/icon-512.png",
+        "email": "hello@subsweep.com.au",
+        "areaServed": "AU"
+      },
+      {
+        "@type": "SoftwareApplication",
+        "name": "SubSweep",
+        "url": "https://www.subsweep.com.au/",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Web, iOS, Android",
+        "description": "Upload a bank statement and SubSweep finds every recurring charge, flags price rises and refund windows, and links to each service's cancellation page. Built for Australian banks.",
+        "publisher": { "@id": "https://www.subsweep.com.au/#org" },
+        "offers": [
+          { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "AUD" },
+          { "@type": "Offer", "name": "Pro", "price": "9.99", "priceCurrency": "AUD",
+            "priceSpecification": { "@type": "UnitPriceSpecification", "price": "9.99", "priceCurrency": "AUD", "billingDuration": "P1M" } }
+        ]
+      }
+    ]
+  }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -137,6 +172,10 @@
     .plan li { padding: 7px 0; font-size: 14.5px; color: var(--ink-2); display: flex; gap: 10px; align-items: flex-start; }
     .plan li::before { content: "✓"; color: var(--mint); font-weight: 800; }
 
+    .guide-links { display: flex; flex-wrap: wrap; gap: 10px; }
+    .guide-links a { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; font-size: 14.5px; color: var(--ink); text-decoration: none; }
+    .guide-links a:hover { border-color: var(--brand, #5b3df5); }
+    .guide-links a.all { font-weight: 600; }
     .faq { max-width: 760px; }
     .faq details { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 20px; margin-bottom: 10px; }
     .faq summary { font-weight: 600; cursor: pointer; font-size: 15.5px; list-style: none; display: flex; justify-content: space-between; align-items: center; }
@@ -292,6 +331,27 @@
         <details><summary>How do refunds work?</summary><p>Many services refund a charge if you ask within days of it landing. SubSweep flags charges inside that window and writes the request for you; you send it from your own email.</p></details>
         <details><summary>Is this financial advice?</summary><p>No. SubSweep is a tool for reviewing your own spending on everyday services. It doesn't recommend financial products or provide financial advice.</p></details>
       </div>
+    </div>
+  </section>
+
+  <section id="guides" style="padding-top:0">
+    <div class="wrap">
+      <div class="sec-head"><div class="kicker">Cancel guides</div><h2>Already know what you want gone?</h2>
+        <p>Where to cancel, what the charge looks like on your statement, and how to check it actually stopped.</p></div>
+      <div class="guide-links">
+        <a href="/cancel/netflix">Cancel Netflix</a>
+        <a href="/cancel/stan">Cancel Stan</a>
+        <a href="/cancel/binge">Cancel Binge</a>
+        <a href="/cancel/kayo">Cancel Kayo</a>
+        <a href="/cancel/disney">Cancel Disney+</a>
+        <a href="/cancel/spotify">Cancel Spotify</a>
+        <a href="/cancel/primevideo">Cancel Amazon Prime</a>
+        <a href="/cancel/adobe">Cancel Adobe</a>
+        <a href="/cancel/hellofresh">Cancel HelloFresh</a>
+        <a href="/cancel/gym">Cancel a gym membership</a>
+        <a class="all" href="/cancel">All 30 guides →</a>
+      </div>
+      <p style="margin-top:22px;color:var(--ink-2);font-size:15px">Comparing tools? <a href="/compare/best-subscription-tracker-australia">Best subscription trackers in Australia</a> · <a href="/compare/rocket-money-alternative-australia">Rocket Money alternatives for Australia</a></p>
     </div>
   </section>
 

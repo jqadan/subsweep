@@ -6,8 +6,9 @@ let config = { billing: 'demo', bankConnect: 'not-configured', pro: false, freeT
 // Inside the iOS/Android apps (see mobile/) this same file runs from a bundled
 // WebView: API calls go to the live server with a bearer token and a pinned
 // workspace id instead of cookies, external pages open in the system browser,
-// and there is no purchase flow because the app stores require their own
-// billing for in-app subscriptions. Pro bought on the website still applies.
+// and the app never mentions or unlocks Pro: the stores require their own
+// billing for anything an app unlocks (App Store 3.1.1), and Pro is sold only
+// on the website. The server enforces the same (forClient in server.js).
 //
 // The build injects SUBSWEEP_API into the bundled app and nowhere else, so its
 // presence is what identifies the native shell. Do NOT gate this on
@@ -17,7 +18,6 @@ let config = { billing: 'demo', bankConnect: 'not-configured', pro: false, freeT
 const API_BASE = (window.SUBSWEEP_API || '').replace(/\/+$/, '');
 const NATIVE = Boolean(API_BASE) || Boolean(window.Capacitor?.isNativePlatform?.());
 const CONSENT_WHERE = NATIVE ? 'in the browser' : 'in the other tab';
-const PRO_NOTE = 'This account is on the free plan. SubSweep Pro accounts see every subscription, plus refund-request emails and monthly monitoring.';
 let authToken = null;
 let workspaceId = null;
 
@@ -453,12 +453,13 @@ async function loadAnalysis() {
   for (const sub of data.subscriptions) list.appendChild(renderSub(sub));
 
   const upsell = $('#upsell');
-  if (data.lockedCount > 0 && NATIVE) {
-    // Store rules: no purchase buttons or links to outside billing in the app.
-    upsell.hidden = false;
-    upsell.innerHTML = `
-      <h3>🔒 ${data.lockedCount} more subscription${data.lockedCount === 1 ? '' : 's'} found</h3>
-      <p>${PRO_NOTE}</p>`;
+  if (NATIVE) {
+    // Store rules: no mention of Pro or of anything locked. A plain statement
+    // of what the list is, so a shorter list than the count is not a mystery.
+    const shown = data.subscriptions.length;
+    upsell.hidden = !(data.summary?.count > shown);
+    upsell.classList.add('plain');
+    upsell.innerHTML = `<p>Showing your ${shown} largest recurring charges.</p>`;
   } else if (data.lockedCount > 0) {
     upsell.hidden = false;
     upsell.innerHTML = `
@@ -485,7 +486,7 @@ function renderSub(sub) {
 
   const actions = [];
   if (sub.cancelUrl) actions.push(`<a class="btn" href="${sub.cancelUrl}" target="_blank" rel="noopener">Cancel guide ↗</a>`);
-  if (sub.flags.refundWindow) {
+  if (sub.flags.refundWindow && (sub.refundEmail || !NATIVE)) {
     actions.push(
       sub.refundEmail
         ? `<button class="btn" data-email>Refund email</button>`
@@ -558,7 +559,7 @@ async function renderMonitorBar() {
 const stripeBilling = () => /^stripe/.test(config.billing || '');
 
 async function upgrade() {
-  if (NATIVE) return toast(PRO_NOTE, 'ok', 8000);
+  if (NATIVE) return; // nothing in the app reaches this; see the note at the top
   try {
     const out = await api('/api/billing/upgrade', { method: 'POST' });
     if (out.checkoutUrl) {
@@ -738,6 +739,7 @@ function renderPills() {
     ? 'Subscription cancelled — Pro stays active until the end of the paid period. Click to manage billing.'
     : '';
   $('#planPill').classList.toggle('good', Boolean(config.pro));
+  $('#planPill').hidden = NATIVE; // a "plan" implies a paid one to buy
   $('#accountBtn').textContent = config.loggedIn ? `👤 ${config.email}` : '👤 Sign up / Log in';
   if (config.pro && stripeBilling() && config.loggedIn && !NATIVE) {
     $('#planPill').style.cursor = 'pointer';
