@@ -61,7 +61,7 @@ place for anything time-sensitive. [151/170]
 Bank connect is coming soon. Until then, upload a CSV from any Australian bank and SubSweep finds every recurring charge, price rise and refund window.
 ```
 
-**Description** [1623/4000]
+**Description** [2269/4000]
 
 ```
 SubSweep finds the subscriptions you forgot you're paying for.
@@ -87,6 +87,13 @@ Load the sample statement to see exactly how it works, or upload your own straig
 MADE IN AUSTRALIA
 
 Built for Australian bank export formats, Australian dollars and Australian services. Bank connection through the regulated Consumer Data Right consent flow is coming soon; CSV upload works with every Australian bank today.
+
+SUBSWEEP PRO
+
+The free version shows your three largest recurring charges. SubSweep Pro, an optional auto-renewing monthly subscription, shows every recurring charge, drafts refund-request emails and keeps monitoring for new charges. Payment is charged to your Apple ID and the subscription renews automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel it any time in your Apple ID settings. Pro belongs to your SubSweep account, so it also works on the website.
+
+Terms of Use: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+Privacy Policy: https://www.subsweep.com.au/privacy
 
 SubSweep helps you review your own spending. It is not a bank, it does not move money, and it does not provide financial product advice.
 ```
@@ -154,22 +161,24 @@ Mirror of `ios/App/App/PrivacyInfo.xcprivacy`; the two must agree.
 | Email Address | Contact Info | App Functionality | No |
 | Other Financial Info | Financial Info | App Functionality | No |
 | User ID | Identifiers | App Functionality | No |
+| Purchase History | Purchases | App Functionality | No |
 
-Tick those three and nothing else. Each maps to a column that actually
+Tick those four and nothing else. Each maps to a column that actually
 persists in the `users` table:
 
 - **Email Address** — the sign-up address.
 - **Other Financial Info** — `saved_analysis`, the derived subscription list.
   The raw transactions are not declared: they live in an in-memory map for the
   session and a restart clears them, so they are never stored.
+- **Purchase History** — Pro bought through In-App Purchase. RevenueCat keeps
+  the purchase record against the account id so Pro follows the account.
 - **User ID** — the account id assigned at sign-up. The per-install workspace
   id is deliberately *not* declared as a Device ID: it never reaches the
   database either, and is only a key into that same in-memory map.
 
 Everything else is **No** — no name (sign-up is email and password only), no
 phone, no address, no health, no location, no contacts, no user content, no
-browsing or search history, no device id, no purchases (Pro is bought on the
-website, and the app only reads the resulting flag), no usage data, no
+browsing or search history, no device id, no usage data, no
 diagnostics. There is no analytics or crash-reporting SDK in the bundle;
 Apple's own crash reports are Apple's collection, not yours.
 
@@ -212,7 +221,7 @@ No account is needed to review the app. On the first screen, tap "Try with sampl
 
 Accounts are optional and only save the result list and enable a monthly reminder email. Sign-up is email and password, and email verification is not required to use the app. Accounts can be deleted from inside the app (tap the email address in the header, then "Delete my account") and deletion is immediate and permanent.
 
-In response to the previous 3.1.1 rejection: the app no longer unlocks anything based on a purchase made elsewhere. Every account — including one that has a paid plan on our website — gets the same free experience in the app, enforced on our server for all requests from the app. The app contains no paid features, no locked content, no mention of a paid plan, no prices, and no purchase links or calls to action. There are no in-app purchases because nothing in the app is for sale.
+In response to the previous 3.1.1 rejections: SubSweep Pro is now sold in the app as an auto-renewing In-App Purchase subscription. To test it, load the sample data, scroll to the "more subscriptions found" panel and tap Subscribe; the app asks you to create a free account first, because Pro belongs to the account (it also covers the saved list and the monthly monitoring emails). "Restore purchases" is on the same panel, with links to the Terms of Use (Apple's standard EULA) and the Privacy Policy. Pro bought on our website also unlocks in the app, as guideline 3.1.3(b) permits now that the same subscription is available through In-App Purchase. The app contains no links or calls to action to buy anywhere else.
 
 Bank connection over open banking (Consumer Data Right) is shown as "coming soon" and is disabled — our accreditation with the data provider is still in progress — so CSV upload is the only way in for this version.
 

@@ -15,7 +15,7 @@
 <tr><td>Bank transactions you upload as a CSV file</td><td>You</td><td>Processed in memory to detect recurring charges. <strong>Never written to disk.</strong></td></tr>
 <tr><td>Bank transactions from a connected bank</td><td>Basiq, with your explicit consent</td><td>Same purpose. Held in memory for your session only. See the CDR policy.</td></tr>
 <tr><td>Your analysis results (merchant names, amounts, cadence, totals)</td><td>Derived by us from the data above</td><td>Saved to your account so your dashboard is there when you return and so monthly monitoring can spot changes</td></tr>
-<tr><td>Subscription and payment status</td><td>Stripe</td><td>To know whether you are on the free or Pro plan. We never see or store your card number.</td></tr>
+<tr><td>Subscription and payment status</td><td>Stripe (website) or RevenueCat on behalf of Apple (iPhone app)</td><td>To know whether you are on the free or Pro plan. We never see or store your card number or Apple payment details.</td></tr>
 <tr><td>Basic technical data (IP address, browser, pages viewed)</td><td>Your browser</td><td>Security, rate limiting and fixing errors</td></tr>
 </table>
 
@@ -31,7 +31,8 @@
 <p>Only the service providers needed to run SubSweep, each limited to its role:</p>
 <div class="card">
 <p><strong>Basiq Pty Ltd</strong> (Australia) — accredited data recipient that retrieves your bank transactions under the Consumer Data Right when you connect a bank. Basiq's own privacy and CDR policies apply to its handling of your data.</p>
-<p><strong>Stripe</strong> — processes payments for SubSweep Pro. Card details are entered on Stripe's pages and never reach our servers.</p>
+<p><strong>Stripe</strong> — processes payments for SubSweep Pro on the website. Card details are entered on Stripe's pages and never reach our servers.</p>
+<p><strong>Apple and RevenueCat</strong> — Apple processes Pro purchases made in the iPhone app. RevenueCat verifies those purchases for us; it receives your SubSweep account ID and Apple's purchase records, and no financial data from your statements. Its copy is deleted when you delete your account.</p>
 <p><strong>Resend</strong> — sends account emails (verification, password reset, monthly monitoring).</p>
 <p><strong>Railway</strong> — hosts the application and database. Servers may be located outside Australia; we protect data in transit with TLS and at rest with access controls.</p>
 </div>

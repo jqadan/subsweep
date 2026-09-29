@@ -33,6 +33,7 @@ function rowToUser(row) {
     emailVerified: Boolean(row.email_verified),
     stripeCustomerId: row.stripe_customer_id,
     proEndsAt: row.pro_ends_at || null,
+    iapExpiresAt: row.iap_expires_at || null,
     basiqUserId: row.basiq_user_id,
     savedAnalysis: row.saved_analysis ? JSON.parse(row.saved_analysis) : null,
     monitoring: row.monitoring ? JSON.parse(row.monitoring) : { enabled: false, lastScanAt: null, lastReminderAt: null },
@@ -46,6 +47,7 @@ const COLUMN_FOR = {
   emailVerified: { col: 'email_verified', map: (v) => (v ? 1 : 0) },
   stripeCustomerId: { col: 'stripe_customer_id', map: (v) => v },
   proEndsAt: { col: 'pro_ends_at', map: (v) => v || null },
+  iapExpiresAt: { col: 'iap_expires_at', map: (v) => v || null },
   basiqUserId: { col: 'basiq_user_id', map: (v) => v },
   savedAnalysis: { col: 'saved_analysis', map: (v) => (v == null ? null : JSON.stringify(v)) },
   monitoring: { col: 'monitoring', map: (v) => (v == null ? null : JSON.stringify(v)) }
@@ -120,12 +122,22 @@ export function isVerified(user) {
   return user.emailVerified !== false;
 }
 
+// Pro from Apple In-App Purchase, still inside its paid period.
+export function hasIapPro(user) {
+  return Boolean(user?.iapExpiresAt && new Date(user.iapExpiresAt) > new Date());
+}
+
+// Pro from either source: Stripe on the website, or Apple in the app.
+export function hasPro(user) {
+  return Boolean(user && (user.pro || hasIapPro(user)));
+}
+
 export function publicUser(user) {
   if (!user) return null;
   return {
     id: user.id,
     email: user.email,
-    pro: user.pro,
+    pro: hasPro(user),
     verified: isVerified(user),
     hasSavedAnalysis: Boolean(user.savedAnalysis),
     monitoring: user.monitoring

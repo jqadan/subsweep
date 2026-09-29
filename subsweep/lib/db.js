@@ -37,6 +37,12 @@ if (!userColumns.includes('pro_ends_at')) {
   // ISO date when a cancelled subscription stops (Pro stays on until then)
   db.exec('ALTER TABLE users ADD COLUMN pro_ends_at TEXT');
 }
+if (!userColumns.includes('iap_expires_at')) {
+  // ISO expiry of Pro bought through Apple In-App Purchase (lib/iap.js).
+  // Kept apart from `pro`, which Stripe owns, so neither source can switch
+  // off Pro that the other one granted.
+  db.exec('ALTER TABLE users ADD COLUMN iap_expires_at TEXT');
+}
 
 // One-time migration from the old JSON file store.
 const LEGACY_FILE = path.join(DATA_DIR, 'users.json');

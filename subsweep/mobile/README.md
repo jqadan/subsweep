@@ -28,13 +28,41 @@ Inside the app the web code detects the native runtime and:
   statement uploads and logins work from the WebView origin;
 - opens Basiq consent, cancel guides and the legal pages in the system
   browser and re-checks the bank connection when the app comes back;
-- shows **no purchase button and no link to billing**. Apple and Google both
-  require their own in-app billing for subscriptions sold inside an app, so
-  the app only explains that Pro accounts see everything. Pro bought on the
-  website applies in the app because it is the same account. If you later
-  want in-app subscriptions, add StoreKit / Play Billing (RevenueCat is the
-  usual shortcut) and have the server treat those receipts like Stripe
-  webhooks.
+- never links to website billing. Apple and Google require their own billing
+  for anything an app unlocks (see below).
+
+## Pro in the apps (In-App Purchase)
+
+Apple rejected the app twice (guideline 3.1.1) while Pro could only be bought
+on the website, so **the iPhone app sells Pro through Apple In-App Purchase**,
+using RevenueCat (`@revenuecat/purchases-capacitor` 11.x, the last line that
+supports Capacitor 7). Once Pro is buyable in the app, Pro bought on the
+website may unlock there too (3.1.3(b)).
+
+- The server decides everything. It only offers IAP to a request from the
+  iPhone app (`X-SubSweep-Platform: ios`) when all RevenueCat variables are
+  set (`lib/iap.js`); every other app request — Android, older builds — gets
+  the free view with no mention of Pro (`forClient` in `server.js`).
+- A purchase is attached to the SubSweep account (RevenueCat app user id =
+  account id), so the app asks for a free account first.
+- After a purchase or restore the app calls `/api/iap/sync`; the server asks
+  RevenueCat what the account holds rather than trusting the app. Renewals,
+  cancellations, refunds and expiry arrive at `/api/revenuecat/webhook`.
+- Apple-bought Pro is stored in `iap_expires_at`, apart from Stripe's `pro`
+  flag, so neither source can switch off Pro the other granted.
+- Deleting an account deletes RevenueCat's copy but cannot stop Apple's
+  billing; the app tells the person to cancel in Settings first.
+
+Railway variables: `REVENUECAT_IOS_KEY` (public `appl_…` key),
+`REVENUECAT_SECRET_KEY` (`sk_…`), `REVENUECAT_WEBHOOK_AUTH` (any long random
+string, also pasted into RevenueCat → Integrations → Webhooks →
+Authorization header, with the URL
+`https://www.subsweep.com.au/api/revenuecat/webhook`), and optionally
+`REVENUECAT_ENTITLEMENT` (default `pro`).
+
+Android stays on the free view until Google Play Billing is set up the same
+way: a Play subscription product, the Google key in RevenueCat, and the
+Android platform allowed in `isIapClient`.
 
 ## Sharing a statement into the app
 

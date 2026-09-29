@@ -13,6 +13,7 @@ import { createSessionCookie, createSessionToken, clearSessionCookie, readSessio
 import { diffAnalyses, runMonitoringTick, CYCLE_DAYS } from './lib/monitor.js';
 import { guidePage, guideIndex, guideKeys } from './lib/cancelGuides.js';
 import { comparePage, COMPARE_PAGES } from './lib/comparePages.js';
+import { iapEnabled, iapIosKey, fetchProExpiry, deleteCustomer, webhookAuthorised, eventUserIds } from './lib/iap.js';
 import { MERCHANTS } from './lib/merchants.js';
 import { emailBackend } from './lib/email.js';
 import {
@@ -95,6 +96,11 @@ app.use(express.json());
 // instead of the ssid cookie. Browsers on the website are unaffected.
 const NATIVE_ORIGINS = new Set(['capacitor://localhost', 'https://localhost', 'http://localhost', 'ionic://localhost']);
 const isNativeClient = (req) => req.headers['x-subsweep-client'] === 'native';
+// An app that can sell Pro itself: the iPhone app, once RevenueCat is set up
+// (lib/iap.js). Builds that predate the platform header, and Android until
+// Play Billing exists, keep the free view.
+const isIapClient = (req) =>
+  isNativeClient(req) && req.headers['x-subsweep-platform'] === 'ios' && iapEnabled();
 app.use('/api', (req, res, next) => {
   const origin = req.headers.origin;
   if (origin && NATIVE_ORIGINS.has(origin)) {
@@ -107,7 +113,7 @@ app.use('/api', (req, res, next) => {
     // the app makes — which looks like "Failed to fetch" with no server log.
     // The origin check above is what actually limits who gets a response.
     const asked = req.headers['access-control-request-headers'];
-    res.setHeader('Access-Control-Allow-Headers', asked || 'Content-Type, Authorization, X-SubSweep-Client, X-Workspace');
+    res.setHeader('Access-Control-Allow-Headers', asked || 'Content-Type, Authorization, X-SubSweep-Client, X-SubSweep-Platform, X-Workspace');
     res.setHeader('Access-Control-Max-Age', '86400');
     if (req.method === 'OPTIONS') return res.sendStatus(204);
   }
@@ -191,16 +197,18 @@ function getContext(req, res) {
 }
 
 function isPro(ctx) {
-  return ctx.user ? ctx.user.pro : ctx.ws.demoPro;
+  return ctx.user ? users.hasPro(ctx.user) : ctx.ws.demoPro;
 }
 
 // Apple (3.1.1) and Google both require in-app purchase for anything an app
-// unlocks, and Pro is sold only on the website. So the apps give every
-// account the free view — top three, no refund emails — and say nothing
-// about Pro. Pro still applies on the web and by email. The full analysis is
-// still what gets saved, so opening the app never truncates the web view.
+// unlocks. An app that cannot sell Pro itself therefore gives every account
+// the free view — top three, no refund emails — and says nothing about Pro.
+// The iPhone app with In-App Purchase switched on is exempt: there Pro can be
+// bought in the app, so Pro from any source may unlock (3.1.3(b)). The full
+// analysis is still what gets saved, so opening an app never truncates the
+// web view.
 function forClient(req, analysis) {
-  if (!isNativeClient(req) || !analysis?.subscriptions) return analysis;
+  if (!isNativeClient(req) || isIapClient(req) || !analysis?.subscriptions) return analysis;
   return {
     ...analysis,
     pro: false,
@@ -235,6 +243,16 @@ function baseUrlOf(req) {
 // Logs the user in for this response: the cookie for browsers, plus the same
 // signed value as a token for the native apps, which cannot use the cookie.
 function sessionResponse(req, res, user) {
+  // A guest who loaded a statement and then signs up or logs in keeps it: the
+  // guest workspace moves to the account. Without this, the statement they
+  // were looking at vanishes the moment they create an account — including
+  // mid-purchase in the app, where they would pay and see nothing new. Only
+  // from a guest session, and never over an account's own loaded statement.
+  const guest = getContext(req, res);
+  if (!guest.user && guest.ws.transactions?.length && !workspaces.get(user.id)?.transactions?.length) {
+    workspaces.set(user.id, guest.ws);
+    workspaces.delete(guest.key);
+  }
   res.setHeader('Set-Cookie', createSessionCookie(user.id));
   const body = { user: users.publicUser(user) };
   if (isNativeClient(req)) body.token = createSessionToken(user.id);
@@ -344,6 +362,15 @@ app.post('/api/account/delete', async (req, res) => {
       console.error('[delete] Basiq cleanup failed, deleting account anyway:', err.message);
     }
   }
+  // RevenueCat's copy of the customer goes too. This does not stop Apple
+  // billing — only the customer can, and the app tells them how.
+  if (iapEnabled()) {
+    try {
+      await deleteCustomer(ctx.user.id);
+    } catch (err) {
+      console.error('[delete] RevenueCat cleanup failed, deleting account anyway:', err.message);
+    }
+  }
   users.deleteUser(ctx.user.id);
   workspaces.delete(ctx.user.id);
   res.setHeader('Set-Cookie', clearSessionCookie());
@@ -357,8 +384,14 @@ app.get('/api/config', (req, res) => {
     // 'available' = production Basiq key, 'sandbox' = Basiq test banks only.
     bankConnect: basiq.basiqEnabled() ? (basiq.basiqLive() ? 'available' : 'sandbox') : 'not-configured',
     billing: stripeEnabled() ? (stripeMode() === 'live' ? 'stripe' : 'stripe-test') : 'demo',
-    pro: isNativeClient(req) ? false : isPro(ctx),
+    pro: isNativeClient(req) && !isIapClient(req) ? false : isPro(ctx),
     proEndsAt: isNativeClient(req) ? null : ctx.user?.proEndsAt || null,
+    // In-App Purchase, only for the app that can use it. userId is the
+    // RevenueCat app user id, so a purchase attaches to this account.
+    iap: isIapClient(req) ? { iosKey: iapIosKey() } : null,
+    userId: isIapClient(req) ? ctx.user?.id || null : null,
+    proSource: isIapClient(req) && ctx.user
+      ? (users.hasIapPro(ctx.user) ? 'apple' : ctx.user.pro ? 'web' : null) : null,
     loggedIn: Boolean(ctx.user),
     email: ctx.user?.email || null,
     verified: ctx.user ? users.isVerified(ctx.user) : null,
@@ -421,6 +454,39 @@ app.get('/api/analysis', (req, res) => {
     });
   }
   res.json(forClient(req, analysis));
+});
+
+// ---- In-App Purchase (iPhone) ----
+// Called by the app straight after a purchase or restore. The server asks
+// RevenueCat what the account actually holds rather than trusting the app.
+app.post('/api/iap/sync', async (req, res) => {
+  const ctx = getContext(req, res);
+  if (!iapEnabled()) return res.status(404).json({ error: 'Not available' });
+  if (!ctx.user) return res.status(401).json({ error: 'Log in first' });
+  try {
+    const iapExpiresAt = await fetchProExpiry(ctx.user.id);
+    const user = users.updateUser(ctx.user.id, { iapExpiresAt });
+    res.json({ pro: users.hasPro(user), proSource: users.hasIapPro(user) ? 'apple' : user.pro ? 'web' : null });
+  } catch (err) {
+    console.error('[iap] sync failed:', err.message);
+    res.status(502).json({ error: 'Could not confirm the purchase just now. Tap "Restore purchases" in a minute.' });
+  }
+});
+
+// Renewals, cancellations, expiries and refunds arrive here. Every event is
+// handled the same way — re-read the account from RevenueCat — so the order
+// events arrive in, and whether one is missed, does not matter.
+app.post('/api/revenuecat/webhook', async (req, res) => {
+  if (!iapEnabled() || !webhookAuthorised(req)) return res.sendStatus(401);
+  const ids = eventUserIds(req.body?.event).filter((id) => users.findById(id));
+  try {
+    for (const id of ids) users.updateUser(id, { iapExpiresAt: await fetchProExpiry(id) });
+    res.json({ received: true, updated: ids.length });
+  } catch (err) {
+    // A non-2xx makes RevenueCat retry later, which is what we want here.
+    console.error('[iap] webhook sync failed:', err.message);
+    res.sendStatus(502);
+  }
 });
 
 // ---- Monitoring ----

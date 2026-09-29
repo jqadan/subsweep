@@ -61,6 +61,20 @@
       </array>
     </dict>
     <dict>
+      <!-- Pro bought through In-App Purchase: RevenueCat keeps the purchase
+           record against the account id so Pro follows the account. -->
+      <key>NSPrivacyCollectedDataType</key>
+      <string>NSPrivacyCollectedDataTypePurchaseHistory</string>
+      <key>NSPrivacyCollectedDataTypeLinked</key>
+      <true/>
+      <key>NSPrivacyCollectedDataTypeTracking</key>
+      <false/>
+      <key>NSPrivacyCollectedDataTypePurposes</key>
+      <array>
+        <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+      </array>
+    </dict>
+    <dict>
       <!-- The derived subscription list saved for signed-in users. Raw
            transactions are never stored, so they are not declared here. -->
       <key>NSPrivacyCollectedDataType</key>

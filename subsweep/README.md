@@ -142,6 +142,7 @@ npm start        # http://localhost:3100
 | `BASIQ_API_KEY` | enables bank connect (sandbox or production key) |
 | `BASIQ_LIVE` | `true` once Basiq has enabled the application for real institutions; until then the Connect bank button is disabled and reads "coming soon", since a sandbox key only reaches test banks |
 | `STRIPE_SECRET_KEY` | `sk_test_...` or `sk_live_...` enables Stripe subscription checkout (test mode is labelled in the UI) |
+| `REVENUECAT_IOS_KEY`, `REVENUECAT_SECRET_KEY`, `REVENUECAT_WEBHOOK_AUTH` | all three enable Pro through Apple In-App Purchase in the iPhone app — see `mobile/README.md` |
 | `STRIPE_PRICE_ID` | the recurring Price for SubSweep Pro |
 | `BASE_URL` | public URL for Stripe redirects |
 | `LEGAL_ENTITY`, `LEGAL_ABN`, `CONTACT_EMAIL` | fill the operating entity into `/privacy`, `/cdr-policy`, `/terms` |

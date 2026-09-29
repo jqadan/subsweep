@@ -6,9 +6,11 @@ let config = { billing: 'demo', bankConnect: 'not-configured', pro: false, freeT
 // Inside the iOS/Android apps (see mobile/) this same file runs from a bundled
 // WebView: API calls go to the live server with a bearer token and a pinned
 // workspace id instead of cookies, external pages open in the system browser,
-// and the app never mentions or unlocks Pro: the stores require their own
-// billing for anything an app unlocks (App Store 3.1.1), and Pro is sold only
-// on the website. The server enforces the same (forClient in server.js).
+// and Pro is sold only through the store's own billing (App Store 3.1.1):
+// the iPhone app sells it with In-App Purchase once the server hands it a
+// RevenueCat key (config.iap); without one — Android, or an older build —
+// the app never mentions or unlocks Pro. The server enforces the same
+// (forClient in server.js), so the client cannot unlock anything itself.
 //
 // The build injects SUBSWEEP_API into the bundled app and nowhere else, so its
 // presence is what identifies the native shell. Do NOT gate this on
@@ -107,7 +109,12 @@ function toast(msg, kind = 'ok', ms = 5000) {
 
 async function api(path, opts = {}) {
   if (NATIVE) {
-    const headers = { ...(opts.headers || {}), 'X-SubSweep-Client': 'native', 'X-Workspace': workspaceId };
+    const headers = {
+      ...(opts.headers || {}),
+      'X-SubSweep-Client': 'native',
+      'X-SubSweep-Platform': window.Capacitor?.getPlatform?.() || 'unknown',
+      'X-Workspace': workspaceId
+    };
     if (authToken) headers.Authorization = `Bearer ${authToken}`;
     opts = { ...opts, headers };
   }
@@ -453,7 +460,11 @@ async function loadAnalysis() {
   for (const sub of data.subscriptions) list.appendChild(renderSub(sub));
 
   const upsell = $('#upsell');
-  if (NATIVE) {
+  if (NATIVE && config.iap) {
+    upsell.classList.remove('plain');
+    upsell.hidden = !(data.lockedCount > 0);
+    if (!upsell.hidden) renderIapOffer(upsell, data.lockedCount);
+  } else if (NATIVE) {
     // Store rules: no mention of Pro or of anything locked. A plain statement
     // of what the list is, so a shorter list than the count is not a mystery.
     const shown = data.subscriptions.length;
@@ -486,7 +497,7 @@ function renderSub(sub) {
 
   const actions = [];
   if (sub.cancelUrl) actions.push(`<a class="btn" href="${sub.cancelUrl}" target="_blank" rel="noopener">Cancel guide ↗</a>`);
-  if (sub.flags.refundWindow && (sub.refundEmail || !NATIVE)) {
+  if (sub.flags.refundWindow && (sub.refundEmail || !NATIVE || config.iap)) {
     actions.push(
       sub.refundEmail
         ? `<button class="btn" data-email>Refund email</button>`
@@ -518,7 +529,10 @@ function renderSub(sub) {
     });
   }
   const lockedBtn = el.querySelector('[data-locked]');
-  if (lockedBtn) lockedBtn.addEventListener('click', upgrade);
+  if (lockedBtn) {
+    lockedBtn.addEventListener('click', () =>
+      NATIVE ? $('#upsell').scrollIntoView({ behavior: 'smooth', block: 'center' }) : upgrade());
+  }
   return el;
 }
 
@@ -552,6 +566,109 @@ async function renderMonitorBar() {
     });
   } catch {
     bar.hidden = true;
+  }
+}
+
+// ---------- in-app purchase (iPhone) ----------
+// Pro through Apple, via RevenueCat. Required disclosures (guideline 3.1.2):
+// the subscription's name, length and price as the App Store reports them,
+// that it renews automatically, and working links to the Terms of Use and
+// the Privacy Policy — all shown before the purchase button.
+const APPLE_EULA = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
+const APPLE_SUBSCRIPTIONS = 'https://apps.apple.com/account/subscriptions';
+let iapReady = null;
+let purchasesPlugin = null;
+const purchases = () => (purchasesPlugin ||= window.Capacitor.registerPlugin('Purchases'));
+
+function ensureIap() {
+  if (!iapReady) {
+    iapReady = purchases().configure({ apiKey: config.iap.iosKey }).catch((err) => {
+      iapReady = null;
+      throw err;
+    });
+  }
+  return iapReady;
+}
+
+async function currentPackage() {
+  await ensureIap();
+  const offerings = await purchases().getOfferings();
+  const offering = offerings?.current;
+  return offering?.monthly || offering?.availablePackages?.[0] || null;
+}
+
+async function renderIapOffer(box, lockedCount) {
+  box.innerHTML = `
+    <h3>🔒 ${lockedCount} more subscription${lockedCount === 1 ? '' : 's'} found</h3>
+    <p>SubSweep Pro shows every subscription, drafts refund-request emails and keeps monitoring for new charges.</p>
+    <p class="fine" id="iapTerms">Loading price…</p>
+    <button class="btn primary" id="iapBuy" disabled>Subscribe</button>
+    <p class="fine" style="margin-top:12px">
+      <button class="linklike" id="iapRestore">Restore purchases</button> ·
+      <a href="${APPLE_EULA}" target="_blank" rel="noopener">Terms of Use</a> ·
+      <a href="${API_BASE}/privacy" target="_blank" rel="noopener">Privacy Policy</a>
+    </p>`;
+  box.querySelector('#iapRestore').addEventListener('click', restorePro);
+  try {
+    const pkg = await currentPackage();
+    if (!pkg) throw new Error('no package');
+    const p = pkg.product;
+    box.querySelector('#iapTerms').textContent =
+      `${p.title || 'SubSweep Pro'} — ${p.priceString} per month. Payment is charged to your Apple ID and ` +
+      'renews automatically each month unless cancelled at least 24 hours before the end of the period. ' +
+      'Manage or cancel any time in your Apple ID settings.';
+    const buy = box.querySelector('#iapBuy');
+    buy.textContent = `Subscribe — ${p.priceString}/month`;
+    buy.disabled = false;
+    buy.addEventListener('click', () => buyPro(pkg, buy));
+  } catch {
+    box.querySelector('#iapTerms').textContent = 'Subscriptions are unavailable right now. Please try again later.';
+  }
+}
+
+// A purchase belongs to a SubSweep account, so Pro also works on the website
+// and on any other device. So the account comes first.
+async function requireAccount(action) {
+  config = await api('/api/config');
+  if (config.loggedIn && config.userId) return true;
+  toast(`Create a free account (or log in) first, so Pro ${action} on the website and your other devices too.`, 'ok', 9000);
+  openAuth('signup');
+  return false;
+}
+
+async function afterIapChange(message) {
+  const out = await api('/api/iap/sync', { method: 'POST' });
+  config = await api('/api/config');
+  renderPills();
+  loadAnalysis();
+  toast(out.pro ? message : 'No active SubSweep Pro subscription was found for this Apple ID.', out.pro ? 'ok' : 'err', 8000);
+}
+
+async function buyPro(pkg, btn) {
+  if (!(await requireAccount('works'))) return;
+  btn.disabled = true;
+  try {
+    await ensureIap();
+    await purchases().logIn({ appUserID: config.userId });
+    await purchases().purchasePackage({ aPackage: pkg });
+    await afterIapChange('✅ SubSweep Pro is active.');
+  } catch (err) {
+    const cancelled = err?.userCancelled || String(err?.code) === '1' || /cancel/i.test(err?.message || '');
+    if (!cancelled) toast(err?.message || 'The purchase did not go through.', 'err', 8000);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function restorePro() {
+  if (!(await requireAccount('restores'))) return;
+  try {
+    await ensureIap();
+    await purchases().logIn({ appUserID: config.userId });
+    await purchases().restorePurchases();
+    await afterIapChange('✅ Purchases restored — SubSweep Pro is active.');
+  } catch (err) {
+    toast(err?.message || 'Could not restore purchases right now.', 'err', 8000);
   }
 }
 
@@ -650,10 +767,9 @@ $('#authForm').addEventListener('submit', async (e) => {
     });
     $('#authModal').hidden = true;
     if (NATIVE && out.token) await saveAuthToken(out.token);
-    config.loggedIn = true;
-    config.email = out.user.email;
-    config.pro = out.user.pro;
-    config.verified = out.user.verified;
+    // Re-read the config rather than taking plan state from the login
+    // response: only the server knows what this client may show.
+    config = await api('/api/config');
     renderPills();
     renderVerifyBanner();
     toast(
@@ -692,7 +808,8 @@ function renderVerifyBanner() {
 $('#accountBtn').addEventListener('click', () => {
   if (!config.loggedIn) return openAuth('signup');
   $('#accountEmail').textContent = `Logged in as ${config.email}`;
-  $('#deleteProNote').hidden = !config.pro;
+  $('#deleteProNote').hidden = !config.pro || config.proSource === 'apple';
+  $('#deleteAppleNote').hidden = config.proSource !== 'apple';
   $('#deletePassword').value = '';
   $('#accountModal').hidden = false;
 });
@@ -704,6 +821,7 @@ $('#accountModal').addEventListener('click', (e) => {
 $('#logoutBtn').addEventListener('click', async () => {
   await api('/api/auth/logout', { method: 'POST' });
   if (NATIVE) await saveAuthToken(null);
+  if (iapReady) await purchases().logOut().catch(() => {}); // already anonymous is fine
   location.reload();
 });
 
@@ -739,7 +857,13 @@ function renderPills() {
     ? 'Subscription cancelled — Pro stays active until the end of the paid period. Click to manage billing.'
     : '';
   $('#planPill').classList.toggle('good', Boolean(config.pro));
-  $('#planPill').hidden = NATIVE; // a "plan" implies a paid one to buy
+  // Without In-App Purchase a "plan" implies a paid one to buy elsewhere.
+  $('#planPill').hidden = NATIVE && !config.iap;
+  if (NATIVE && config.pro && config.proSource === 'apple') {
+    $('#planPill').style.cursor = 'pointer';
+    $('#planPill').title = 'Manage your subscription in your Apple ID settings';
+    $('#planPill').onclick = () => openExternal(APPLE_SUBSCRIPTIONS);
+  }
   $('#accountBtn').textContent = config.loggedIn ? `👤 ${config.email}` : '👤 Sign up / Log in';
   if (config.pro && stripeBilling() && config.loggedIn && !NATIVE) {
     $('#planPill').style.cursor = 'pointer';
