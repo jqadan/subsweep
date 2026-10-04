@@ -1,5 +1,5 @@
 {
-  "mode": "inspect",
+  "mode": "apply",
   "build": 22,
   "subscription": {
     "groupName": "SubSweep Pro",

@@ -87,6 +87,9 @@ async function main() {
       type: 'subscriptionGroups', attributes: { referenceName: sub.groupName }, relationships: { app: rel('apps', app.id) }
     })).data;
     log(`created group ${sub.groupName}`);
+  }
+  const glocs = await api('GET', `/v1/subscriptionGroups/${group.id}/subscriptionGroupLocalizations`);
+  if (!glocs.data.some((l) => l.attributes.locale === sub.locale)) {
     await api('POST', '/v1/subscriptionGroupLocalizations', {
       type: 'subscriptionGroupLocalizations', attributes: { name: sub.displayName, locale: sub.locale },
       relationships: { subscriptionGroup: rel('subscriptionGroups', group.id) }
