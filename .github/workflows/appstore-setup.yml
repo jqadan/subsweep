@@ -1,0 +1,45 @@
+name: App Store setup
+
+# Runs subsweep/store/asc-setup.mjs with the App Store Connect API key the
+# iOS build already uses. Triggered by editing subsweep/store/asc-setup.json
+# ("mode": "inspect" is read-only; "apply" creates and updates).
+
+on:
+  push:
+    branches: [claude/subsweep-app]
+    paths:
+      - 'subsweep/store/asc-setup.json'
+      - 'subsweep/store/asc-setup.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Restore the App Store Connect API key
+        env:
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: |
+          KEY="$RUNNER_TEMP/asc.p8"
+          if printf '%s' "$ASC_KEY_P8_BASE64" | grep -q 'BEGIN PRIVATE KEY'; then
+            printf '%s\n' "$ASC_KEY_P8_BASE64" > "$KEY"
+          else
+            printf '%s' "$ASC_KEY_P8_BASE64" | tr -d '[:space:]' | base64 -d > "$KEY"
+          fi
+          openssl pkey -in "$KEY" -noout
+          echo "ASC_KEY_PATH=$KEY" >> "$GITHUB_ENV"
+      - name: Run the setup
+        working-directory: subsweep/store
+        env:
+          ASC_KEY_ID_RAW: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID_RAW: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          export ASC_KEY_ID="$(printf '%s' "$ASC_KEY_ID_RAW" | tr -d '[:space:]')"
+          export ASC_ISSUER_ID="$(printf '%s' "$ASC_ISSUER_ID_RAW" | tr -d '[:space:]')"
+          node asc-setup.mjs
