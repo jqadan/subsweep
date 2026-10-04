@@ -13,7 +13,7 @@ import { createSessionCookie, createSessionToken, clearSessionCookie, readSessio
 import { diffAnalyses, runMonitoringTick, CYCLE_DAYS } from './lib/monitor.js';
 import { guidePage, guideIndex, guideKeys } from './lib/cancelGuides.js';
 import { comparePage, COMPARE_PAGES } from './lib/comparePages.js';
-import { iapEnabled, iapIosKey, fetchProExpiry, deleteCustomer, webhookAuthorised, eventUserIds } from './lib/iap.js';
+import { iapEnabled, iapIosKey, fetchProExpiry, deleteCustomer, webhookAuthorised, eventUserIds, discover } from './lib/iap.js';
 import { MERCHANTS } from './lib/merchants.js';
 import { emailBackend } from './lib/email.js';
 import {
@@ -633,6 +633,15 @@ if (process.env.DISABLE_MONITORING_TICK !== '1') {
     }).catch((err) => console.error('[monitoring] tick failed:', err.message));
   }, TICK_MS).unref();
 }
+
+// In-App Purchase: find the RevenueCat project and the app's public key now,
+// and again every 30 minutes, so setting it up later needs no redeploy.
+const discoverIap = () => discover()
+  .then((f) => process.env.REVENUECAT_SECRET_KEY &&
+    console.log(`[iap] ${iapEnabled() ? 'enabled' : 'not ready'} (project ${f.projectId || 'none'}, App Store key ${f.iosKey ? 'found' : 'missing'})`))
+  .catch((err) => console.error('[iap] discovery failed:', err.message));
+discoverIap();
+setInterval(discoverIap, 30 * 60 * 1000).unref();
 
 app.listen(PORT, () => {
   console.log(`SubSweep running at http://localhost:${PORT}`);

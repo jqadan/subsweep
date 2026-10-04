@@ -53,12 +53,15 @@ website may unlock there too (3.1.3(b)).
 - Deleting an account deletes RevenueCat's copy but cannot stop Apple's
   billing; the app tells the person to cancel in Settings first.
 
-Railway variables: `REVENUECAT_IOS_KEY` (public `appl_…` key),
-`REVENUECAT_SECRET_KEY` (`sk_…`), `REVENUECAT_WEBHOOK_AUTH` (any long random
-string, also pasted into RevenueCat → Integrations → Webhooks →
-Authorization header, with the URL
-`https://www.subsweep.com.au/api/revenuecat/webhook`), and optionally
-`REVENUECAT_ENTITLEMENT` (unset = any active entitlement counts as Pro).
+Railway needs one variable, `REVENUECAT_SECRET_KEY`: a RevenueCat **v2**
+secret key with read & write on project configuration and customer
+information. The server finds the project and the App Store app's public SDK
+key from it (logged at boot as `[iap] enabled`), and derives the webhook
+password from it. RevenueCat itself is configured by
+`store/rc-setup.mjs` (workflow `revenuecat-setup.yml`): the App Store app with
+Apple's In-App Purchase key, the product, entitlement, offering package and
+the webhook. Optional overrides: `REVENUECAT_IOS_KEY`,
+`REVENUECAT_WEBHOOK_AUTH`, `REVENUECAT_ENTITLEMENT`.
 
 Android stays on the free view until Google Play Billing is set up the same
 way: a Play subscription product, the Google key in RevenueCat, and the

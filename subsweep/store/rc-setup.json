@@ -1,0 +1,8 @@
+{
+  "mode": "inspect",
+  "bundleId": "au.com.subsweep.app",
+  "productId": "au.com.subsweep.pro.monthly",
+  "productName": "SubSweep Pro Monthly",
+  "entitlement": "au_com_subsweep_app_pro",
+  "webhookUrl": "https://www.subsweep.com.au/api/revenuecat/webhook"
+}
