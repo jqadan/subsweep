@@ -1,0 +1,46 @@
+name: RevenueCat setup
+
+# Runs subsweep/store/rc-setup.mjs against RevenueCat's v2 API. Triggered by
+# editing subsweep/store/rc-setup.json ("mode": "inspect" is read-only;
+# "apply" creates what is missing).
+#
+# Secrets: REVENUECAT_SECRET_KEY (v2, read & write on project configuration
+# and customer information), RC_IAP_KEY_P8 + RC_IAP_KEY_ID (Apple's In-App
+# Purchase key), plus the App Store Connect key the iOS build already uses.
+
+on:
+  push:
+    branches: [claude/subsweep-app]
+    paths:
+      - 'subsweep/store/rc-setup.json'
+      - 'subsweep/store/rc-setup.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run the setup
+        working-directory: subsweep/store
+        env:
+          REVENUECAT_SECRET_KEY: ${{ secrets.REVENUECAT_SECRET_KEY }}
+          RC_IAP_KEY_P8: ${{ secrets.RC_IAP_KEY_P8 }}
+          RC_IAP_KEY_ID: ${{ secrets.RC_IAP_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: |
+          # The App Store Connect key is stored as PEM or base64 of PEM.
+          if printf '%s' "$ASC_KEY_P8_BASE64" | grep -q 'BEGIN PRIVATE KEY'; then
+            ASC_KEY_PEM="$ASC_KEY_P8_BASE64"
+          else
+            ASC_KEY_PEM="$(printf '%s' "$ASC_KEY_P8_BASE64" | tr -d '[:space:]' | base64 -d)"
+          fi
+          export ASC_KEY_PEM
+          node rc-setup.mjs

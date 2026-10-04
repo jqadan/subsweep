@@ -1,0 +1,51 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="icon" type="image/svg+xml" href="/brand/icon.svg" /><link rel="stylesheet" href="/legal/_style.css" /><title>CDR policy — SubSweep</title></head><body>
+<nav class="nav"><a class="logo" href="/"><img src="/brand/icon.svg" alt="" />SubSweep</a><div class="links"><a href="/privacy">Privacy</a><a href="/cdr-policy">CDR policy</a><a href="/terms">Terms</a><a href="/app">Open the app</a></div></nav>
+<main>
+<h1>Consumer Data Right policy</h1>
+<p class="meta">Effective {{EFFECTIVE}} · How SubSweep handles bank data obtained through open banking</p>
+
+<p>The Consumer Data Right (CDR) lets you share data your bank holds about you with accredited providers. SubSweep, operated by {{ENTITY}}{{ABN_CLAUSE}}, uses CDR data as a <strong>CDR representative of Basiq Pty Ltd</strong>, an accredited data recipient (accreditation held by Basiq). This policy explains what we collect, how we use it, and your rights. It sits alongside our <a href="/privacy">privacy policy</a>.</p>
+
+<h2>1. What CDR data we collect</h2>
+<p>When you choose "Connect bank" and give consent on Basiq's consent screen, we receive:</p>
+<ul>
+<li>A list of the accounts you selected and the institution they belong to.</li>
+<li>Transaction history for those accounts: date, description, amount and direction.</li>
+</ul>
+<p>We request transaction data only. We do not request balances, personal details, payee lists or direct debit authorisations.</p>
+
+<h2>2. Why we collect it</h2>
+<p>For one purpose: to detect recurring charges in your transactions and show you what they cost, when they were last charged, whether the price changed, and whether a recent charge may be refundable. Where you enable monthly monitoring, we re-check your connected accounts about every 30 days for the same purpose and email you what changed.</p>
+
+<h2>3. How we handle and store it</h2>
+<ul>
+<li>Transaction data is retrieved from Basiq into server memory, analysed, and discarded. <strong>We do not write raw CDR data to disk or to our database.</strong></li>
+<li>We keep only the derived results: merchant names, amounts, frequency and totals for the recurring charges we identified. These are stored against your account.</li>
+<li>Data is encrypted in transit. Our database is hosted with Railway, which may store data outside Australia. Access is restricted to the operators of the service.</li>
+</ul>
+
+<h2>4. Who we disclose it to</h2>
+<p>We do not disclose CDR data to any third party. It is not sold, shared with advertisers, or used to train models. Basiq, as the accredited data recipient, holds your consent record and the connection to your bank; its CDR policy is at <a href="https://www.basiq.io" rel="noopener">basiq.io</a>.</p>
+
+<h2>5. Your consent and how to withdraw it</h2>
+<ul>
+<li>Consent is given on Basiq's consent screen, where you choose the accounts, the data and the sharing period.</li>
+<li>You can withdraw consent at any time by clicking <strong>Disconnect bank</strong> in the SubSweep app. This deletes the connection at Basiq and removes any bank data from your session immediately.</li>
+<li>You can also withdraw consent through your bank's own data-sharing dashboard, or by emailing <a href="mailto:{{EMAIL}}">{{EMAIL}}</a>.</li>
+<li>Consents expire at the end of the sharing period you chose, after which no further data is collected.</li>
+</ul>
+
+<h2>6. Deletion and de-identification</h2>
+<p>When consent is withdrawn or expires, any CDR data in memory is discarded. Derived analysis results remain in your account so your history is preserved; you can delete them by deleting your account (see the privacy policy) and we will remove them within 10 business days. We do not de-identify CDR data for other uses.</p>
+
+<h2>7. Correcting data</h2>
+<p>CDR data comes directly from your bank and we cannot alter it. If you believe transaction data is inaccurate, contact your bank. If a recurring charge has been misidentified in your results, email us and we will correct the detection.</p>
+
+<h2>8. Complaints</h2>
+<p>Email <a href="mailto:{{EMAIL}}">{{EMAIL}}</a> with "CDR complaint" in the subject. We acknowledge complaints within 2 business days and aim to resolve them within 30 days. If you are not satisfied, you may complain to the Office of the Australian Information Commissioner (<a href="https://www.oaic.gov.au" rel="noopener">oaic.gov.au</a>) or, for matters concerning the accredited data recipient, to Basiq.</p>
+
+<h2>9. Contact</h2>
+<p>{{ENTITY}} · <a href="mailto:{{EMAIL}}">{{EMAIL}}</a></p>
+</main>
+<footer>© {{YEAR}} {{ENTITY}} · <a href="/privacy">Privacy policy</a><a href="/cdr-policy">CDR policy</a><a href="/terms">Terms</a><a href="mailto:{{EMAIL}}">{{EMAIL}}</a></footer>
+</body></html>
