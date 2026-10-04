@@ -58,7 +58,7 @@ Railway variables: `REVENUECAT_IOS_KEY` (public `appl_…` key),
 string, also pasted into RevenueCat → Integrations → Webhooks →
 Authorization header, with the URL
 `https://www.subsweep.com.au/api/revenuecat/webhook`), and optionally
-`REVENUECAT_ENTITLEMENT` (default `pro`).
+`REVENUECAT_ENTITLEMENT` (unset = any active entitlement counts as Pro).
 
 Android stays on the free view until Google Play Billing is set up the same
 way: a Play subscription product, the Google key in RevenueCat, and the

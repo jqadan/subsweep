@@ -6,18 +6,18 @@
 // website may unlock in the app too — so turning this on is also what lets
 // web Pro customers see Pro on their iPhone.
 //
-// Railway variables (all four are needed; without them the apps stay on the
+// Railway variables (the first three are needed; without them the apps stay on the
 // free view and nothing here runs):
 //   REVENUECAT_IOS_KEY        public Apple SDK key (appl_…), sent to the app
 //   REVENUECAT_SECRET_KEY     secret API key (sk_…), server only
 //   REVENUECAT_WEBHOOK_AUTH   any long random string; paste the same value
 //                             into RevenueCat → Integrations → Webhooks →
 //                             Authorization header
-//   REVENUECAT_ENTITLEMENT    optional, defaults to "pro"
+//   REVENUECAT_ENTITLEMENT    optional; when unset, any active entitlement
+//                             counts as Pro (the project has only the one)
 import crypto from 'node:crypto';
 
 const RC_API = 'https://api.revenuecat.com/v1';
-const entitlement = () => process.env.REVENUECAT_ENTITLEMENT || 'pro';
 
 export const iapIosKey = () => process.env.REVENUECAT_IOS_KEY || '';
 export const iapEnabled = () => Boolean(
@@ -39,10 +39,17 @@ async function rc(method, path) {
 // a modified client cannot grant itself Pro.
 export async function fetchProExpiry(appUserId) {
   const json = await rc('GET', `/subscribers/${encodeURIComponent(appUserId)}`);
-  const ent = json?.subscriber?.entitlements?.[entitlement()];
-  if (!ent) return null;
-  if (ent.expires_date == null) return '9999-12-31T00:00:00.000Z'; // non-expiring grant
-  return new Date(ent.expires_date) > new Date() ? new Date(ent.expires_date).toISOString() : null;
+  const all = json?.subscriber?.entitlements || {};
+  const wanted = process.env.REVENUECAT_ENTITLEMENT;
+  const ents = wanted ? [all[wanted]].filter(Boolean) : Object.values(all);
+  // The latest expiry among active entitlements; null expiry = never expires.
+  let best = null;
+  for (const ent of ents) {
+    if (ent.expires_date == null) return '9999-12-31T00:00:00.000Z';
+    const exp = new Date(ent.expires_date);
+    if (exp > new Date() && (!best || exp > best)) best = exp;
+  }
+  return best ? best.toISOString() : null;
 }
 
 // Removes RevenueCat's copy of the customer on account deletion. It does NOT
