@@ -1,5 +1,5 @@
 {
-  "mode": "inspect",
+  "mode": "apply",
   "bundleId": "au.com.subsweep.app",
   "productId": "au.com.subsweep.pro.monthly",
   "productName": "SubSweep Pro Monthly",
