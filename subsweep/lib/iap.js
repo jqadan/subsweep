@@ -21,6 +21,7 @@ const BUNDLE_ID = 'au.com.subsweep.app';
 const secret = () => process.env.REVENUECAT_SECRET_KEY || '';
 
 let found = { projectId: null, iosKey: null }; // filled by discover()
+let lastCheck = { at: null, error: null };
 
 async function rc(method, path, { allow404 = false } = {}) {
   const res = await fetch(`${RC}${path}`, {
@@ -38,6 +39,15 @@ async function rc(method, path, { allow404 = false } = {}) {
 // RevenueCat) is picked up without a code change.
 export async function discover() {
   if (!secret()) return found;
+  try {
+    return await discoverNow();
+  } catch (err) {
+    lastCheck = { at: new Date().toISOString(), error: err.message };
+    throw err;
+  }
+}
+
+async function discoverNow() {
   const projects = await rc('GET', '/projects');
   const projectId = projects.items?.[0]?.id || null;
   let iosKey = null;
@@ -50,7 +60,24 @@ export async function discover() {
     }
   }
   found = { projectId, iosKey };
+  lastCheck = {
+    at: new Date().toISOString(),
+    error: !projectId ? 'no project visible to this key'
+      : !iosKey ? `no App Store app with bundle id ${BUNDLE_ID}, or it has no production public key` : null
+  };
   return found;
+}
+
+// What /api/iap/status reports: enough to tell why In-App Purchase is off,
+// and nothing secret. The public SDK key is public by design.
+export function iapStatus() {
+  return {
+    enabled: iapEnabled(),
+    secretKeySet: Boolean(secret()),
+    projectFound: Boolean(found.projectId),
+    iosKey: iapIosKey() || null,
+    lastCheck
+  };
 }
 
 export const iapIosKey = () => process.env.REVENUECAT_IOS_KEY || found.iosKey || '';

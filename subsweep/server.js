@@ -13,7 +13,7 @@ import { createSessionCookie, createSessionToken, clearSessionCookie, readSessio
 import { diffAnalyses, runMonitoringTick, CYCLE_DAYS } from './lib/monitor.js';
 import { guidePage, guideIndex, guideKeys } from './lib/cancelGuides.js';
 import { comparePage, COMPARE_PAGES } from './lib/comparePages.js';
-import { iapEnabled, iapIosKey, fetchProExpiry, deleteCustomer, webhookAuthorised, eventUserIds, discover } from './lib/iap.js';
+import { iapEnabled, iapIosKey, fetchProExpiry, deleteCustomer, webhookAuthorised, eventUserIds, discover, iapStatus } from './lib/iap.js';
 import { MERCHANTS } from './lib/merchants.js';
 import { emailBackend } from './lib/email.js';
 import {
@@ -457,6 +457,10 @@ app.get('/api/analysis', (req, res) => {
 });
 
 // ---- In-App Purchase (iPhone) ----
+// Why In-App Purchase is on or off, for checking a deployment from outside.
+// Reports only booleans, the public SDK key and the last lookup error.
+app.get('/api/iap/status', (req, res) => res.json(iapStatus()));
+
 // Called by the app straight after a purchase or restore. The server asks
 // RevenueCat what the account actually holds rather than trusting the app.
 app.post('/api/iap/sync', async (req, res) => {
