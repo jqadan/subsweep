@@ -1,0 +1,15 @@
+{
+  "mode": "inspect",
+  "build": 22,
+  "subscription": {
+    "groupName": "SubSweep Pro",
+    "referenceName": "SubSweep Pro Monthly",
+    "productId": "au.com.subsweep.pro.monthly",
+    "displayName": "SubSweep Pro",
+    "description": "Every subscription, refund emails, monitoring",
+    "locale": "en-AU",
+    "priceAUD": 12.99,
+    "reviewNote": "Load the sample data, scroll to the 'more subscriptions found' panel and tap Subscribe. The app asks for a free account first because Pro belongs to the account."
+  },
+  "reviewScreenshot": "./screenshots/ios-review/purchase-screen.png"
+}

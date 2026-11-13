@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SubSweep</string>
+    <string name="title_activity_main">SubSweep</string>
+    <string name="package_name">au.com.subsweep.app</string>
+    <string name="custom_url_scheme">au.com.subsweep.app</string>
+</resources>

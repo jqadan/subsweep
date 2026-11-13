@@ -1,0 +1,14 @@
+{
+  "appId": "au.com.subsweep.app",
+  "appName": "SubSweep",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "ios": {
+    "contentInset": "never"
+  }
+}
